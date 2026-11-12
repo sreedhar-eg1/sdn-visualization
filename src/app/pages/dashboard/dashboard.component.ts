@@ -1,0 +1,623 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { HighchartsChartComponent } from 'highcharts-angular';
+import type * as Highcharts from 'highcharts';
+import { RedRecordsModalComponent } from '../../components/red-records-modal/red-records-modal.component';
+import {
+  CategoryRedGreenSummary,
+  DatasetMode,
+  DateRangePreset,
+  KpiModalContext,
+  ReportType,
+  SanctionsRecord,
+  ScreeningCategory,
+  ScreeningSource,
+} from '../../models/sanctions.models';
+import { SanctionsDataService } from '../../services/sanctions-data.service';
+import { exportRecordsToCsv } from '../../utils/csv-export.util';
+
+function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
+  return (record.matchedTerms ?? [record.category]).includes(category);
+}
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [FormsModule, HighchartsChartComponent, RedRecordsModalComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './dashboard.component.html',
+})
+export class DashboardComponent {
+  protected readonly dataService = inject(SanctionsDataService);
+
+  private readonly initialRange = this.dataService.getDateRangeForPreset('ALL_DATES');
+
+  // Filter signals
+  protected readonly selectedSource = signal<ScreeningSource | 'ALL'>('ALL');
+  protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
+  protected readonly startDate = signal<string>(this.initialRange.start);
+  protected readonly endDate = signal<string>(this.initialRange.end);
+  protected readonly selectedReport = signal<ReportType>('EXECUTIVE_OVERVIEW');
+  protected readonly selectedReportCountry = signal<string>('ALL');
+  protected readonly uploadStatusMessage = signal<string | null>(null);
+  protected readonly isDraggingFiles = signal<boolean>(false);
+
+  // Modal state
+  protected readonly modalContext = signal<KpiModalContext | null>(null);
+
+  protected readonly sourceOptions: ReadonlyArray<{
+    label: string;
+    value: ScreeningSource | 'ALL';
+  }> = [
+    { label: 'All Sources', value: 'ALL' },
+    { label: 'PAPERCEPT', value: 'PAPERCEPT' },
+    { label: 'S1M', value: 'S1M' },
+    { label: 'IDAMS', value: 'IDAMS' }
+  ];
+
+  protected readonly datePresets: ReadonlyArray<{
+    label: string;
+    value: DateRangePreset;
+  }> = [
+    { label: 'All Dates (Mock + Excel)', value: 'ALL_DATES' },
+    { label: 'Last Quarter', value: 'LAST_QUARTER' },
+    { label: 'Last 30 Days', value: 'LAST_30_DAYS' },
+    { label: 'Last 7 Days', value: 'LAST_7_DAYS' },
+    { label: 'Year to Date', value: 'YTD' },
+    { label: 'Custom Range', value: 'CUSTOM' },
+  ];
+
+  protected readonly reportOptions: ReadonlyArray<{
+    label: string;
+    value: ReportType;
+  }> = [
+    { label: 'Executive Overview', value: 'EXECUTIVE_OVERVIEW' },
+    { label: 'Country Specific Report', value: 'COUNTRY_SPECIFIC' },
+    { label: 'PAL / Author Escalation Report', value: 'PAL_AUTHOR_REPORT' },
+    { label: 'Source Audit Summary', value: 'SOURCE_AUDIT' },
+    { label: 'SDN Compliance Brief', value: 'SDN_COMPLIANCE' },
+  ];
+
+  // Filtered dataset based on DatasetMode + Source + Date Range + optional Report country focus
+  protected readonly filteredRecords = computed<SanctionsRecord[]>(() => {
+    const source = this.selectedSource();
+    const start = this.startDate();
+    const end = this.endDate();
+    const report = this.selectedReport();
+    const reportCountry = this.selectedReportCountry();
+
+    return this.dataService.records().filter((record) => {
+      if (source !== 'ALL' && record.source !== source) {
+        return false;
+      }
+      if (start && record.decisionDate < start) {
+        return false;
+      }
+      if (end && record.decisionDate > end) {
+        return false;
+      }
+      if (
+        report === 'COUNTRY_SPECIFIC' &&
+        reportCountry !== 'ALL' &&
+        record.country !== reportCountry
+      ) {
+        return false;
+      }
+      return true;
+    });
+  });
+
+  protected readonly availableCountries = computed<string[]>(() => {
+    const countries = new Set(this.dataService.records().map((r) => r.country));
+    return Array.from(countries).sort();
+  });
+
+  protected readonly redRecords = computed<SanctionsRecord[]>(() =>
+    this.filteredRecords().filter((r) => r.status === 'Red')
+  );
+
+  protected readonly pclEventCount = computed<number>(
+    () => this.filteredRecords().filter((r) => recordHasCategory(r, 'PCL')).length
+  );
+
+  // Primary 6 KPI Metrics
+  protected readonly kpiMetrics = computed(() => {
+    const recs = this.filteredRecords();
+    const authorIdentityKey = (r: SanctionsRecord): string =>
+      r.authorEmail ? r.authorEmail.toLowerCase() : r.authorId;
+
+    const uniqueDocs = new Set(recs.map((r) => r.documentId));
+    const uniqueFlaggedAuthors = new Set(recs.map(authorIdentityKey));
+    const totalCoAuthors = recs.reduce((sum, r) => sum + r.coAuthorCount, 0);
+    const palEvents = recs.filter((r) => recordHasCategory(r, 'PAL'));
+    const pclEvents = recs.filter((r) => recordHasCategory(r, 'PCL'));
+
+    const redDocsSet = new Set(
+      recs.filter((r) => r.status === 'Red').map((r) => r.documentId)
+    );
+    const greenDocsCount = Array.from(uniqueDocs).filter(
+      (docId) => !redDocsSet.has(docId)
+    ).length;
+
+    return {
+      flagEvents: recs.length,
+      flagEventsRed: recs.filter((r) => r.status === 'Red').length,
+      uniqueDocuments: uniqueDocs.size,
+      redDocuments: redDocsSet.size,
+      greenDocuments: greenDocsCount,
+      flaggedAuthorIden: uniqueFlaggedAuthors.size,
+      flaggedAuthorsRed: new Set(
+        recs.filter((r) => r.status === 'Red').map(authorIdentityKey)
+      ).size,
+      coAuthorRecords: totalCoAuthors,
+      coAuthorsRed: recs
+        .filter((r) => r.status === 'Red')
+        .reduce((sum, r) => sum + r.coAuthorCount, 0),
+      palEvents: palEvents.length,
+      palRed: palEvents.filter((r) => r.status === 'Red').length,
+      pclEvents: pclEvents.length,
+      pclRed: pclEvents.filter((r) => r.status === 'Red').length,
+    };
+  });
+
+  // Document Red vs Green breakdown across PAL, PCL, and SDN
+  protected readonly watchlistDispositions = computed<CategoryRedGreenSummary[]>(() => {
+    const recs = this.filteredRecords();
+    const categories: ReadonlyArray<{
+      category: ScreeningCategory;
+      label: string;
+      fullName: string;
+    }> = [
+      { category: 'PAL', label: 'PAL', fullName: 'Prohibited Author List' },
+      { category: 'PCL', label: 'PCL', fullName: 'Prohibited Country List' },
+      { category: 'SDN', label: 'SDN', fullName: 'Specially Designated Nationals' },
+    ];
+
+    return categories.map(({ category, label, fullName }) => {
+      const catRecs = recs.filter((r) => recordHasCategory(r, category));
+      const redDocIds = new Set(
+        catRecs.filter((r) => r.status === 'Red').map((r) => r.documentId)
+      );
+      const allDocIds = new Set(catRecs.map((r) => r.documentId));
+      const greenDocs = Array.from(allDocIds).filter((id) => !redDocIds.has(id)).length;
+
+      return {
+        category,
+        label,
+        fullName,
+        redDocs: redDocIds.size,
+        greenDocs,
+        totalDocs: allDocIds.size,
+      };
+    });
+  });
+
+  // Chart 1: PCL Breakdown (Column chart by country)
+  protected readonly pclChartOptions = computed<Highcharts.Options>(() => {
+    const pclRecords = this.filteredRecords().filter((r) =>
+      recordHasCategory(r, 'PCL')
+    );
+    const countryMap = new Map<string, { red: number; green: number }>();
+
+    for (const rec of pclRecords) {
+      const current = countryMap.get(rec.country) ?? { red: 0, green: 0 };
+      if (rec.status === 'Red') current.red += 1;
+      else current.green += 1;
+      countryMap.set(rec.country, current);
+    }
+
+    const sorted = Array.from(countryMap.entries()).sort(
+      (a, b) => b[1].red + b[1].green - (a[1].red + a[1].green)
+    );
+
+    const categories = sorted.map(([country]) => country);
+    const redSeries = sorted.map(([, counts]) => counts.red);
+    const greenSeries = sorted.map(([, counts]) => counts.green);
+
+    return {
+      chart: { type: 'column', height: 300 },
+      xAxis: {
+        categories,
+        crosshair: true,
+        labels: { style: { color: '#475569', fontSize: '11px', fontWeight: '500' } },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: { text: 'PCL Events', style: { color: '#64748b', fontSize: '11px' } },
+        stackLabels: {
+          enabled: true,
+          style: { fontWeight: '600', color: '#1e293b', fontSize: '11px' },
+        },
+        gridLineColor: '#e2e8f0',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: { fontSize: '11px', color: '#475569' },
+      },
+      tooltip: { shared: true },
+      plotOptions: {
+        column: {
+          stacking: 'normal',
+          borderRadius: 4,
+          borderWidth: 0,
+        },
+      },
+      series: [
+        {
+          id: 'pcl-red',
+          name: 'Red (Flagged)',
+          type: 'column',
+          data: redSeries,
+          color: '#e11d48',
+        },
+        {
+          id: 'pcl-green',
+          name: 'Green (Cleared)',
+          type: 'column',
+          data: greenSeries,
+          color: '#10b981',
+        },
+      ],
+    };
+  });
+
+  // Chart 2: Flag Events by Source (Column/Bar chart)
+  protected readonly sourceChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const sources = this.dataService.availableSources();
+    const activeSources =
+      this.selectedSource() === 'ALL'
+        ? sources
+        : sources.filter((s) => s === this.selectedSource());
+
+    const counts = activeSources.map((src) => ({
+      name: src,
+      total: recs.filter((r) => r.source === src).length,
+      red: recs.filter((r) => r.source === src && r.status === 'Red').length,
+    }));
+
+    return {
+      chart: { type: 'column', height: 300 },
+      xAxis: {
+        categories: counts.map((c) => c.name),
+        labels: { style: { color: '#475569', fontSize: '11px', fontWeight: '600' } },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: { text: 'Flag Events', style: { color: '#64748b', fontSize: '11px' } },
+        gridLineColor: '#e2e8f0',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: { fontSize: '11px', color: '#475569' },
+      },
+      tooltip: { shared: true },
+      plotOptions: {
+        column: {
+          borderRadius: 4,
+          borderWidth: 0,
+          dataLabels: {
+            enabled: true,
+            style: { fontSize: '11px', fontWeight: '600', textOutline: 'none' },
+          },
+        },
+      },
+      series: [
+        {
+          id: 'src-total',
+          name: 'Total Flag Events',
+          type: 'column',
+          data: counts.map((c) => c.total),
+          color: '#0c2752',
+        },
+        {
+          id: 'src-red',
+          name: 'Red Status',
+          type: 'column',
+          data: counts.map((c) => c.red),
+          color: '#e11d48',
+        },
+      ],
+    };
+  });
+
+  // Chart 3: Reason Mix (Pie chart)
+  protected readonly reasonMixChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const palCount = recs.filter((r) => recordHasCategory(r, 'PAL')).length;
+    const pclCount = recs.filter((r) => recordHasCategory(r, 'PCL')).length;
+    const sdnCount = recs.filter((r) => recordHasCategory(r, 'SDN')).length;
+
+    return {
+      chart: { type: 'pie', height: 300 },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> triggers ({point.percentage:.1f}%)',
+      },
+      plotOptions: {
+        pie: {
+          allowPointSelect: true,
+          cursor: 'pointer',
+          innerSize: '52%',
+          dataLabels: {
+            enabled: true,
+            format: '<b>{point.name}</b>: {point.percentage:.1f}%',
+            style: { fontSize: '11px', color: '#334155', textOutline: 'none' },
+          },
+          showInLegend: true,
+        },
+      },
+      legend: {
+        itemStyle: { fontSize: '11px', color: '#475569' },
+      },
+      series: [
+        {
+          id: 'reason-mix',
+          name: 'Screening Reason',
+          type: 'pie',
+          data: [
+            {
+              name: 'PCL (Prohibited Country List)',
+              y: pclCount,
+              color: '#f59e0b',
+            },
+            {
+              name: 'PAL (Prohibited Author List)',
+              y: palCount,
+              color: '#2563eb',
+            },
+            {
+              name: 'SDN (Watchlist / OFAC)',
+              y: sdnCount,
+              color: '#7c3aed',
+            },
+          ],
+        },
+      ],
+    };
+  });
+
+  // Chart 4: Daily Decision Events (Spline chart)
+  protected readonly dailyTrendChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const dayMap = new Map<string, { total: number; red: number; green: number }>();
+
+    for (const rec of recs) {
+      const entry = dayMap.get(rec.decisionDate) ?? { total: 0, red: 0, green: 0 };
+      entry.total += 1;
+      if (rec.status === 'Red') entry.red += 1;
+      else entry.green += 1;
+      dayMap.set(rec.decisionDate, entry);
+    }
+
+    const sortedDays = Array.from(dayMap.keys()).sort();
+    const labels = sortedDays.map((iso) => iso.slice(5));
+
+    return {
+      chart: { type: 'spline', height: 300 },
+      xAxis: {
+        categories: labels,
+        tickInterval: Math.max(1, Math.floor(labels.length / 8)),
+        labels: { style: { color: '#475569', fontSize: '11px' } },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: { text: 'Decision Events', style: { color: '#64748b', fontSize: '11px' } },
+        gridLineColor: '#e2e8f0',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: { fontSize: '11px', color: '#475569' },
+      },
+      tooltip: { shared: true },
+      plotOptions: {
+        spline: {
+          lineWidth: 2.5,
+          marker: { enabled: sortedDays.length <= 20, radius: 4 },
+        },
+      },
+      series: [
+        {
+          id: 'daily-total',
+          name: 'Total Decisions',
+          type: 'spline',
+          data: sortedDays.map((d) => dayMap.get(d)?.total ?? 0),
+          color: '#0284c7',
+        },
+        {
+          id: 'daily-red',
+          name: 'Red Flagged',
+          type: 'spline',
+          data: sortedDays.map((d) => dayMap.get(d)?.red ?? 0),
+          color: '#e11d48',
+        },
+        {
+          id: 'daily-green',
+          name: 'Green Cleared',
+          type: 'spline',
+          data: sortedDays.map((d) => dayMap.get(d)?.green ?? 0),
+          color: '#10b981',
+        },
+      ],
+    };
+  });
+
+  protected setDatasetMode(mode: DatasetMode): void {
+    this.dataService.datasetMode.set(mode);
+    if (mode === 'UPLOADED_ONLY') {
+      this.onPresetChange('ALL_DATES');
+    } else if (mode === 'MOCK_ONLY' && this.selectedPreset() === 'ALL_DATES') {
+      this.onPresetChange('LAST_QUARTER');
+    } else if (this.selectedPreset() === 'ALL_DATES') {
+      this.onPresetChange('ALL_DATES');
+    }
+  }
+
+  protected onCsvFileUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    void this.processUploadedFiles(Array.from(input.files)).then(() => {
+      input.value = '';
+    });
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(false);
+  }
+
+  protected onDropFiles(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(false);
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      void this.processUploadedFiles(Array.from(files));
+    }
+  }
+
+  private async processUploadedFiles(files: File[]): Promise<void> {
+    let totalAdded = 0;
+    let totalSkipped = 0;
+    let processedCount = 0;
+
+    for (const file of files) {
+      const isExcelWorkbook = /\.(xlsx|xls)$/i.test(file.name);
+      const result = isExcelWorkbook
+        ? await this.dataService.importUploadedExcel(await file.arrayBuffer(), file.name)
+        : this.dataService.importUploadedCsv(await file.text(), file.name);
+      if (result.parsed > 0) {
+        processedCount += 1;
+        totalAdded += result.added;
+        totalSkipped += result.skippedDuplicates;
+      }
+    }
+
+    if (processedCount === 0) {
+      this.uploadStatusMessage.set(
+        `No valid screening rows found in the selected file(s). Please upload a valid Excel (.xlsx/.xls) or CSV screening export.`
+      );
+      return;
+    }
+
+    if (this.dataService.datasetMode() === 'MOCK_ONLY') {
+      this.dataService.datasetMode.set('UPLOADED_ONLY');
+    }
+    this.onPresetChange('ALL_DATES');
+
+    const totalRecords = this.dataService.uploadedExcelRecords().length;
+    const totalFiles = this.dataService.uploadedFiles().length;
+    const dupNote = totalSkipped > 0 ? ` (${totalSkipped} duplicate row(s) skipped)` : '';
+    this.uploadStatusMessage.set(
+      `Merged +${totalAdded} record(s) from ${processedCount} file(s)${dupNote}. Active total: ${totalRecords} records across ${totalFiles} file(s).`
+    );
+  }
+
+  protected loadSampleExcel(): void {
+    const result = this.dataService.loadBuiltInSampleCsv();
+    this.dataService.datasetMode.set('UPLOADED_ONLY');
+    this.onPresetChange('ALL_DATES');
+    this.uploadStatusMessage.set(
+      `Loaded ${result.added} sample records (idams-sample-23-rows.csv). Upload additional files anytime to merge.`
+    );
+  }
+
+  protected removeUploadedFile(batchId: string): void {
+    this.dataService.removeUploadedFile(batchId);
+    this.onPresetChange('ALL_DATES');
+    const remaining = this.dataService.uploadedExcelRecords().length;
+    this.uploadStatusMessage.set(
+      remaining > 0
+        ? `File removed. ${remaining} merged record(s) remaining.`
+        : null
+    );
+  }
+
+  protected clearUploadedFiles(): void {
+    this.dataService.clearUploadedFiles();
+    this.uploadStatusMessage.set(null);
+  }
+
+  protected onPresetChange(preset: DateRangePreset): void {
+    this.selectedPreset.set(preset);
+    if (preset !== 'CUSTOM') {
+      const range = this.dataService.getDateRangeForPreset(preset);
+      this.startDate.set(range.start);
+      this.endDate.set(range.end);
+    }
+  }
+
+  protected onCustomStartDate(date: string): void {
+    this.startDate.set(date);
+    this.selectedPreset.set('CUSTOM');
+  }
+
+  protected onCustomEndDate(date: string): void {
+    this.endDate.set(date);
+    this.selectedPreset.set('CUSTOM');
+  }
+
+  protected onReportChange(report: ReportType): void {
+    this.selectedReport.set(report);
+    if (report !== 'COUNTRY_SPECIFIC') {
+      this.selectedReportCountry.set('ALL');
+    }
+  }
+
+  protected resetFilters(): void {
+    this.selectedSource.set('ALL');
+    this.selectedPreset.set('ALL_DATES');
+    const range = this.dataService.getDateRangeForPreset('ALL_DATES');
+    this.startDate.set(range.start);
+    this.endDate.set(range.end);
+    this.selectedReport.set('EXECUTIVE_OVERVIEW');
+    this.selectedReportCountry.set('ALL');
+  }
+
+  protected openRedModal(
+    title: string,
+    subtitle: string,
+    categoryFilter: ScreeningCategory | 'ALL',
+    metricKey: string
+  ): void {
+    this.modalContext.set({
+      title,
+      subtitle,
+      categoryFilter,
+      metricKey,
+    });
+  }
+
+  protected closeRedModal(): void {
+    this.modalContext.set(null);
+  }
+
+  protected exportReportBriefCsv(): void {
+    const report = this.selectedReport();
+    let records = this.filteredRecords();
+    if (report === 'PAL_AUTHOR_REPORT') {
+      records = records.filter((r) => recordHasCategory(r, 'PAL'));
+    } else if (report === 'SDN_COMPLIANCE') {
+      records = records.filter((r) => recordHasCategory(r, 'SDN'));
+    }
+    exportRecordsToCsv(records, `report-${report.toLowerCase()}`);
+  }
+}
