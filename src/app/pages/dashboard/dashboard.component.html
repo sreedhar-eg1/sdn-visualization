@@ -451,6 +451,276 @@
       </div>
     </section>
 
+    <!-- Surveillance Trends & Intelligence Section -->
+    @if (trendsSummary(); as tr) {
+      @if (tr.hasData) {
+        <section aria-label="Surveillance Trends and Hotspots" class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span class="mc-eyebrow">— Surveillance Intelligence &bull; Trends &amp; Hotspots</span>
+              <h2 class="mc-h2">Screening Trends Analysis</h2>
+              <p class="mc-lead text-sm">
+                Key patterns, repeating submissions, and risk concentrations identified in active report:
+                <strong>{{ selectedReport() }}</strong> ({{ tr.totalRecords }} records analyzed).
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="mc-tag info">Live Trends</span>
+              <span class="mc-tag neutral">{{ tr.uniqueArticlesCount }} Unique Articles</span>
+            </div>
+          </div>
+
+          <!-- Trend Highlight Cards -->
+          <div class="mc-grid-3">
+            <!-- Trend Card 1: Most Submitted Article -->
+            <div class="mc-card mc-stat">
+              <div class="flex items-start justify-between gap-2">
+                <span class="mc-eyebrow text-xs" style="color: var(--mc-oxblood)">Most Submitted Article</span>
+                <span class="mc-tag bad">
+                  {{ tr.mostSubmittedArticle?.redCount || 0 }} Red
+                </span>
+              </div>
+
+              <div class="my-3">
+                <div class="flex items-baseline gap-2">
+                  <div class="n">{{ tr.mostSubmittedArticle?.submissionCount || 0 }}</div>
+                  <span class="mc-small font-medium">Submissions / Screenings</span>
+                </div>
+                <div class="k">Most Repeating Document in Report</div>
+
+                <div class="mt-3 p-3 rounded-lg" style="background: var(--mc-cream)">
+                  <h4 class="font-serif font-semibold text-sm line-clamp-2" style="color: var(--mc-oxblood)" [title]="tr.mostSubmittedArticle?.documentTitle">
+                    {{ tr.mostSubmittedArticle?.documentTitle || 'Untitled Document' }}
+                  </h4>
+
+                  <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span class="mc-code font-bold">Doc ID: {{ tr.mostSubmittedArticle?.documentId }}</span>
+                    @if (tr.mostSubmittedArticle?.manuscriptId) {
+                      <span class="mc-code font-bold">MS: {{ tr.mostSubmittedArticle?.manuscriptId }}</span>
+                    }
+                    @if (tr.mostSubmittedArticle?.journalName) {
+                      <span class="opacity-75 italic text-[11px] truncate max-w-[200px]" [title]="tr.mostSubmittedArticle?.journalName">
+                        {{ tr.mostSubmittedArticle?.journalName }}
+                      </span>
+                    }
+                  </div>
+
+                  @if (tr.mostSubmittedArticle?.primaryAuthor) {
+                    <div class="mt-1 text-xs opacity-80">
+                      Author: <strong>{{ tr.mostSubmittedArticle?.primaryAuthor }}</strong>
+                      @if ((tr.mostSubmittedArticle?.authors?.length || 0) > 1) {
+                        <span> (+{{ (tr.mostSubmittedArticle?.authors?.length || 1) - 1 }} co-authors)</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="mc-small pt-2 flex items-center justify-between text-xs" style="border-top: 1px solid var(--mc-line)">
+                <span>Pipeline Source(s):</span>
+                <strong class="mc-code">{{ tr.mostSubmittedArticle?.sources?.join(', ') || 'N/A' }}</strong>
+              </div>
+            </div>
+
+            <!-- Trend Card 2: Most REDs by Ingest Source -->
+            <div class="mc-card-dark mc-stat">
+              <div class="flex items-start justify-between gap-2">
+                <span class="mc-eyebrow text-xs" style="color: rgba(255,255,255,0.7)">Highest RED Risk Source</span>
+                <span class="mc-tag bad">Top Risk Source</span>
+              </div>
+
+              <div class="my-3">
+                <div class="flex items-baseline gap-2">
+                  <div class="n" style="color: #FFFFFF">{{ tr.topRedSource?.redCount || 0 }}</div>
+                  <span class="mc-small text-white/80 font-medium">RED Flag Events</span>
+                </div>
+                <div class="k" style="color: rgba(255,255,255,0.7)">Most REDs in Ingestion Pipelines</div>
+
+                <div class="mt-3 p-3 rounded-lg" style="background: rgba(255,255,255,0.08)">
+                  <div class="flex items-center justify-between gap-2">
+                    <h4 class="font-serif font-bold text-xl text-white">
+                      {{ tr.topRedSource?.source || 'N/A' }}
+                    </h4>
+                    <span class="mc-tag bad text-xs">
+                      {{ tr.topRedSource?.redPercentage || 0 }}% of all REDs
+                    </span>
+                  </div>
+
+                  <p class="text-xs text-white/70 mt-1">
+                    {{ tr.topRedSource?.redCount || 0 }} out of {{ tr.topRedSource?.totalCount || 0 }} total events in {{ tr.topRedSource?.source }} flagged as RED ({{ tr.topRedSource?.sourceRedRate || 0 }}% escalation rate).
+                  </p>
+
+                  <!-- Mini progress bar -->
+                  <div class="w-full bg-white/20 rounded-full h-2 mt-3 overflow-hidden">
+                    <div
+                      class="h-full rounded-full"
+                      style="background: var(--mc-bad);"
+                      [style.width.%]="tr.topRedSource?.sourceRedRate || 0"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mc-small pt-2 flex items-center justify-between text-xs text-white/70" style="border-top: 1px solid rgba(255,255,255,0.15)">
+                <span>Total Red Events in Report:</span>
+                <strong class="text-white">{{ kpiMetrics().flagEventsRed }} REDs</strong>
+              </div>
+            </div>
+
+            <!-- Trend Card 3: Key Entity & Jurisdiction Concentration -->
+            <div class="mc-card mc-stat">
+              <div class="flex items-start justify-between gap-2">
+                <span class="mc-eyebrow text-xs" style="color: var(--mc-oxblood)">Surveillance Concentrations</span>
+                <span class="mc-tag neutral">Entity &amp; Geo</span>
+              </div>
+
+              <div class="my-3 space-y-3">
+                <!-- Top Flagged Author -->
+                @if (tr.mostFlaggedAuthor; as auth) {
+                  <div class="p-3 rounded-lg" style="background: var(--mc-cream)">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="mc-eyebrow text-[10px]">Most Screened Author</span>
+                      <span class="mc-tag bad text-[10px]">{{ auth.redCount }} Red</span>
+                    </div>
+                    <div class="font-bold text-sm mt-1" style="color: var(--mc-oxblood)">{{ auth.name }}</div>
+                    <div class="text-xs opacity-75 truncate">{{ auth.organization || auth.country || 'N/A' }}</div>
+                    <div class="text-xs mt-1 opacity-60">{{ auth.submissionCount }} appearances in active report</div>
+                  </div>
+                }
+
+                <!-- Top Jurisdiction Hotspot -->
+                @if (tr.highestRiskJurisdiction; as geo) {
+                  <div class="p-3 rounded-lg" style="background: var(--mc-cream)">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="mc-eyebrow text-[10px]">Top Jurisdiction Hotspot</span>
+                      <span class="mc-tag bad text-[10px]">{{ geo.redCount }} Red</span>
+                    </div>
+                    <div class="font-bold text-sm mt-1" style="color: var(--mc-oxblood)">{{ geo.country }}</div>
+                    <div class="text-xs mt-1 opacity-60">{{ geo.flagCount }} total flagged submissions</div>
+                  </div>
+                }
+              </div>
+
+              <div class="mc-small pt-2 flex items-center justify-between text-xs" style="border-top: 1px solid var(--mc-line)">
+                <span>Dataset Mode:</span>
+                <strong class="mc-code">{{ dataService.datasetMode() }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trends Split Detail View: Top Articles Leaderboard + Source Red Breakdown -->
+          <div class="mc-grid-2">
+            <!-- Left: Top Submitted / Repeating Articles Leaderboard -->
+            <div class="mc-card">
+              <div class="mc-card-head">
+                <div>
+                  <span class="mc-eyebrow">— Article Volume</span>
+                  <h3 class="mc-h3">Top Repeating Articles in Report</h3>
+                  <p class="mc-small">Ranked by repeating document submissions across screened pipelines</p>
+                </div>
+                <span class="mc-tag neutral">Top {{ tr.topSubmittedArticles.length }}</span>
+              </div>
+
+              <div class="mc-table-wrap overflow-x-auto">
+                <table class="mc-table w-full text-left text-xs">
+                  <thead>
+                    <tr>
+                      <th class="w-10">Rank</th>
+                      <th>Document &amp; Manuscript</th>
+                      <th>Primary Author</th>
+                      <th>Source(s)</th>
+                      <th class="text-right">Submissions</th>
+                      <th class="text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (art of tr.topSubmittedArticles; track art.documentId; let idx = $index) {
+                      <tr>
+                        <td class="font-mono font-bold text-center">#{{ idx + 1 }}</td>
+                        <td>
+                          <div class="font-semibold line-clamp-1" [title]="art.documentTitle">
+                            {{ art.documentTitle }}
+                          </div>
+                          <div class="mc-small flex items-center gap-2 mt-0.5">
+                            <span class="mc-code font-bold">Doc: {{ art.documentId }}</span>
+                            @if (art.manuscriptId) {
+                              <span class="mc-code">MS: {{ art.manuscriptId }}</span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <div class="font-medium">{{ art.primaryAuthor }}</div>
+                          @if (art.authors.length > 1) {
+                            <div class="text-[10px] opacity-60">+{{ art.authors.length - 1 }} co-author(s)</div>
+                          }
+                        </td>
+                        <td>
+                          <span class="mc-tag neutral text-[10px]">{{ art.sources.join(', ') }}</span>
+                        </td>
+                        <td class="text-right font-mono font-bold text-sm">
+                          {{ art.submissionCount }}
+                        </td>
+                        <td class="text-right">
+                          @if (art.redCount > 0) {
+                            <span class="mc-tag bad">{{ art.redCount }} Red</span>
+                          } @else {
+                            <span class="mc-tag ok">Cleared</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Right: Source Red Breakdown & Chart -->
+            <div class="mc-card-dark">
+              <div class="mc-card-head">
+                <div>
+                  <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Risk Concentration</span>
+                  <h3 class="mc-h3" style="color: #FFFFFF">RED Escalations by Ingest Source</h3>
+                  <p class="mc-small text-white/70">Breakdown of Red violations across editorial sources</p>
+                </div>
+                <span class="mc-tag">Source Mix</span>
+              </div>
+
+              <!-- Highcharts Source Red Trend Horizontal Column / Bar -->
+              <div class="w-full min-h-[220px]">
+                <highcharts-chart
+                  [options]="trendsSourceChartOptions()"
+                  [oneToOne]="true"
+                  class="block w-full h-[220px]"
+                />
+              </div>
+
+              <!-- Source Leaderboard List -->
+              <div class="space-y-2 mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.15)">
+                @for (src of tr.sourceRedBreakdown; track src.source) {
+                  <div class="flex items-center justify-between gap-3 p-2.5 rounded-lg" style="background: rgba(255,255,255,0.06)">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm text-white">{{ src.source }}</span>
+                      @if (src.isTopSource) {
+                        <span class="mc-tag bad text-[10px]">Most REDs</span>
+                      }
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="text-xs text-white/70">
+                        {{ src.redPercentage }}% of all REDs
+                      </span>
+                      <span class="mc-tag bad font-mono font-bold">
+                        {{ src.redCount }} Red / {{ src.totalCount }}
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+      }
+    }
+
     <!-- Split Layout 1: Watchlist Dispositions (White card, Left) & Reason Mix (Dark Cocoa card, Right) -->
     <section aria-label="Watchlist Dispositions and Reason Mix" class="mc-split">
       <!-- Left: Watchlist Dispositions in white .mc-card -->

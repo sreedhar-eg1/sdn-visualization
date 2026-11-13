@@ -113,3 +113,49 @@ export interface CategoryRedGreenSummary {
   greenDocs: number;
   totalDocs: number;
 }
+
+export interface ArticleSubmissionTrend {
+  documentId: string;
+  documentTitle: string;
+  journalName?: string;
+  manuscriptId?: string;
+  submissionCount: number;
+  redCount: number;
+  greenCount: number;
+  sources: ScreeningSource[];
+  authors: string[];
+  primaryAuthor: string;
+  latestDate: string;
+}
+
+export interface SourceRedTrend {
+  source: ScreeningSource;
+  redCount: number;
+  totalCount: number;
+  redPercentage: number;
+  sourceRedRate: number;
+  isTopSource: boolean;
+}
+
+export interface TrendsSummary {
+  hasData: boolean;
+  totalRecords: number;
+  uniqueArticlesCount: number;
+  mostSubmittedArticle: ArticleSubmissionTrend | null;
+  topSubmittedArticles: ArticleSubmissionTrend[];
+  topRedSource: SourceRedTrend | null;
+  sourceRedBreakdown: SourceRedTrend[];
+  mostFlaggedAuthor: {
+    name: string;
+    email?: string;
+    organization?: string;
+    country: string;
+    submissionCount: number;
+    redCount: number;
+  } | null;
+  highestRiskJurisdiction: {
+    country: string;
+    flagCount: number;
+    redCount: number;
+  } | null;
+}

@@ -10,6 +10,7 @@ import { HighchartsChartComponent } from 'highcharts-angular';
 import type * as Highcharts from 'highcharts';
 import { RedRecordsModalComponent } from '../../components/red-records-modal/red-records-modal.component';
 import {
+  ArticleSubmissionTrend,
   CategoryRedGreenSummary,
   DatasetMode,
   DateRangePreset,
@@ -18,6 +19,8 @@ import {
   SanctionsRecord,
   ScreeningCategory,
   ScreeningSource,
+  SourceRedTrend,
+  TrendsSummary,
 } from '../../models/sanctions.models';
 import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
 import { exportRecordsToCsv } from '../../utils/csv-export.util';
@@ -109,6 +112,232 @@ export class DashboardComponent {
       }
       return true;
     });
+  });
+
+  // Dataset records scoped to the selected report view
+  protected readonly reportScopedRecords = computed<SanctionsRecord[]>(() => {
+    const report = this.selectedReport();
+    let records = this.filteredRecords();
+
+    if (report === 'SanctionedDocumentsDetails') {
+      records = records.filter(
+        (r) => r.status === 'Red' || (r.matchedTerms && r.matchedTerms.length > 0)
+      );
+    } else if (report === 'BlockedArticle') {
+      records = records.filter((r) => r.status === 'Red');
+    } else if (report === 'DocumentHistory' || report === 'Document History') {
+      records = [...records].sort((a, b) => b.decisionDate.localeCompare(a.decisionDate));
+    } else if (report === 'AuthorsHistory' || report === 'Authors History') {
+      records = [...records].sort((a, b) => a.authorName.localeCompare(b.authorName));
+    }
+
+    return records;
+  });
+
+  // Automated Trend Extraction based on uploaded Excel records & active reports
+  protected readonly trendsSummary = computed<TrendsSummary>(() => {
+    const records = this.reportScopedRecords();
+    if (records.length === 0) {
+      return {
+        hasData: false,
+        totalRecords: 0,
+        uniqueArticlesCount: 0,
+        mostSubmittedArticle: null,
+        topSubmittedArticles: [],
+        topRedSource: null,
+        sourceRedBreakdown: [],
+        mostFlaggedAuthor: null,
+        highestRiskJurisdiction: null,
+      };
+    }
+
+    // 1. Group by Article: Document Title or Document ID
+    const docMap = new Map<
+      string,
+      {
+        documentId: string;
+        documentTitle: string;
+        journalName?: string;
+        manuscriptId?: string;
+        submissionCount: number;
+        redCount: number;
+        greenCount: number;
+        sources: Set<ScreeningSource>;
+        authors: Set<string>;
+        primaryAuthor: string;
+        latestDate: string;
+      }
+    >();
+
+    // 2. Source tally for "Most REDs in which source - based on the reports"
+    const sourceStatsMap = new Map<ScreeningSource, { redCount: number; totalCount: number }>();
+
+    // 3. Author tally for most flagged author
+    const authorStatsMap = new Map<
+      string,
+      {
+        name: string;
+        email?: string;
+        organization?: string;
+        country: string;
+        submissionCount: number;
+        redCount: number;
+      }
+    >();
+
+    // 4. Country tally for highest risk jurisdiction
+    const countryStatsMap = new Map<string, { flagCount: number; redCount: number }>();
+
+    for (const r of records) {
+      const docKey = r.documentId || r.documentTitle;
+      let docEntry = docMap.get(docKey);
+      if (!docEntry) {
+        docEntry = {
+          documentId: r.documentId,
+          documentTitle: r.documentTitle,
+          journalName: r.journalName,
+          manuscriptId: r.manuscriptId,
+          submissionCount: 0,
+          redCount: 0,
+          greenCount: 0,
+          sources: new Set(),
+          authors: new Set(),
+          primaryAuthor: r.authorName,
+          latestDate: r.decisionDate,
+        };
+        docMap.set(docKey, docEntry);
+      }
+
+      docEntry.submissionCount++;
+      if (r.status === 'Red') {
+        docEntry.redCount++;
+      } else {
+        docEntry.greenCount++;
+      }
+      docEntry.sources.add(r.source);
+      if (r.authorName && r.authorName !== 'Unknown Author') {
+        docEntry.authors.add(r.authorName);
+      }
+      if (r.decisionDate > docEntry.latestDate) {
+        docEntry.latestDate = r.decisionDate;
+      }
+      if (!docEntry.journalName && r.journalName) {
+        docEntry.journalName = r.journalName;
+      }
+      if (!docEntry.manuscriptId && r.manuscriptId) {
+        docEntry.manuscriptId = r.manuscriptId;
+      }
+
+      // Source tally
+      const sStat = sourceStatsMap.get(r.source) ?? { redCount: 0, totalCount: 0 };
+      sStat.totalCount++;
+      if (r.status === 'Red') {
+        sStat.redCount++;
+      }
+      sourceStatsMap.set(r.source, sStat);
+
+      // Author tally
+      if (r.authorName && r.authorName !== 'Unknown Author') {
+        const aStat = authorStatsMap.get(r.authorName) ?? {
+          name: r.authorName,
+          email: r.authorEmail,
+          organization: r.organization,
+          country: r.country,
+          submissionCount: 0,
+          redCount: 0,
+        };
+        aStat.submissionCount++;
+        if (r.status === 'Red') aStat.redCount++;
+        authorStatsMap.set(r.authorName, aStat);
+      }
+
+      // Country tally
+      if (r.country && r.country !== 'Unspecified') {
+        const cStat = countryStatsMap.get(r.country) ?? { flagCount: 0, redCount: 0 };
+        cStat.flagCount++;
+        if (r.status === 'Red') cStat.redCount++;
+        countryStatsMap.set(r.country, cStat);
+      }
+    }
+
+    // Sort articles by repeating submission count descending, then red count descending
+    const sortedArticles: ArticleSubmissionTrend[] = Array.from(docMap.values())
+      .map((entry) => ({
+        documentId: entry.documentId,
+        documentTitle: entry.documentTitle,
+        journalName: entry.journalName,
+        manuscriptId: entry.manuscriptId,
+        submissionCount: entry.submissionCount,
+        redCount: entry.redCount,
+        greenCount: entry.greenCount,
+        sources: Array.from(entry.sources),
+        authors: Array.from(entry.authors),
+        primaryAuthor: entry.primaryAuthor,
+        latestDate: entry.latestDate,
+      }))
+      .sort((a, b) => b.submissionCount - a.submissionCount || b.redCount - a.redCount);
+
+    const mostSubmittedArticle = sortedArticles[0] ?? null;
+    const topSubmittedArticles = sortedArticles.slice(0, 5);
+
+    // Source Red Trends
+    const totalRedAcrossSources = Array.from(sourceStatsMap.values()).reduce(
+      (sum, s) => sum + s.redCount,
+      0
+    );
+
+    const sourceRedBreakdown: SourceRedTrend[] = Array.from(sourceStatsMap.entries())
+      .map(([src, stat]) => ({
+        source: src,
+        redCount: stat.redCount,
+        totalCount: stat.totalCount,
+        redPercentage:
+          totalRedAcrossSources > 0
+            ? Math.round((stat.redCount / totalRedAcrossSources) * 100)
+            : 0,
+        sourceRedRate:
+          stat.totalCount > 0
+            ? Math.round((stat.redCount / stat.totalCount) * 100)
+            : 0,
+        isTopSource: false,
+      }))
+      .sort((a, b) => b.redCount - a.redCount || b.totalCount - a.totalCount);
+
+    const topRedSource = sourceRedBreakdown[0] ?? null;
+    if (topRedSource && topRedSource.redCount > 0) {
+      topRedSource.isTopSource = true;
+    }
+
+    // Most flagged author
+    const sortedAuthors = Array.from(authorStatsMap.values()).sort(
+      (a, b) => b.redCount - a.redCount || b.submissionCount - a.submissionCount
+    );
+    const mostFlaggedAuthor = sortedAuthors[0] ?? null;
+
+    // Highest risk jurisdiction
+    const sortedCountries = Array.from(countryStatsMap.entries()).sort(
+      (a, b) => b[1].redCount - a[1].redCount || b[1].flagCount - a[1].flagCount
+    );
+    const topCountry = sortedCountries[0];
+    const highestRiskJurisdiction = topCountry
+      ? {
+          country: topCountry[0],
+          flagCount: topCountry[1].flagCount,
+          redCount: topCountry[1].redCount,
+        }
+      : null;
+
+    return {
+      hasData: true,
+      totalRecords: records.length,
+      uniqueArticlesCount: docMap.size,
+      mostSubmittedArticle,
+      topSubmittedArticles,
+      topRedSource,
+      sourceRedBreakdown,
+      mostFlaggedAuthor,
+      highestRiskJurisdiction,
+    };
   });
 
   protected readonly availableCountries = computed<string[]>(() => {
@@ -314,6 +543,95 @@ export class DashboardComponent {
           name: 'Green (Cleared)',
           type: 'column',
           data: greenSeries,
+          color: '#3E7D69',
+        },
+      ],
+    };
+  });
+
+  // Trends Section Chart: RED Escalations by Source (Bar chart on dark cocoa card)
+  protected readonly trendsSourceChartOptions = computed<Highcharts.Options>(() => {
+    const trends = this.trendsSummary();
+    const sources = trends.sourceRedBreakdown;
+
+    const categories = sources.map((s) => s.source);
+    const redData = sources.map((s) => s.redCount);
+    const greenData = sources.map((s) => Math.max(0, s.totalCount - s.redCount));
+
+    return {
+      chart: {
+        type: 'bar',
+        height: 220,
+        backgroundColor: 'transparent',
+        spacingTop: 10,
+        spacingBottom: 10,
+      },
+      title: { text: undefined },
+      credits: { enabled: false },
+      xAxis: {
+        categories,
+        lineColor: 'rgba(255, 255, 255, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(255, 255, 255, 0.90)',
+            fontSize: '11px',
+            fontWeight: '600',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'Flag Events',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(255, 255, 255, 0.70)',
+            fontSize: '10px',
+          },
+        },
+        gridLineColor: 'rgba(255, 255, 255, 0.12)',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#FFFFFF',
+        },
+      },
+      tooltip: {
+        shared: true,
+        shadow: false,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.20)',
+        backgroundColor: '#3E2923',
+        style: {
+          color: '#FFFFFF',
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+        },
+      },
+      plotOptions: {
+        series: {
+          stacking: 'normal',
+          borderRadius: 2,
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          name: 'Red Violations',
+          data: redData,
+          color: '#B5524A',
+        },
+        {
+          type: 'bar',
+          name: 'Cleared / Green',
+          data: greenData,
           color: '#3E7D69',
         },
       ],

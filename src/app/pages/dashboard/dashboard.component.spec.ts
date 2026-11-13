@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHighcharts } from 'highcharts-angular';
 import { DashboardComponent } from './dashboard.component';
+import { SanctionsDataService } from '../../services/sanctions-data.service';
 
 describe('DashboardComponent', () => {
   beforeEach(async () => {
@@ -156,5 +157,56 @@ describe('DashboardComponent', () => {
 
     expect(fixture.componentInstance['selectedReport']()).toBe('SanctionedDocumentsDetails');
     expect(el.textContent).toContain('SanctionedDocumentsDetails');
+  });
+
+  it('should extract and display trends including most submitted article and most REDs by source', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dataService = TestBed.inject(SanctionsDataService);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Load sample data into uploaded Excel mode
+    dataService.loadBuiltInSampleCsv();
+    dataService.datasetMode.set('UPLOADED_ONLY');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const comp = fixture.componentInstance;
+    const trends = comp['trendsSummary']();
+
+    expect(trends.hasData).toBe(true);
+    expect(trends.totalRecords).toBe(23);
+    expect(trends.uniqueArticlesCount).toBeGreaterThan(0);
+
+    // 1. Most submitted article
+    expect(trends.mostSubmittedArticle).toBeTruthy();
+    expect(trends.mostSubmittedArticle?.documentTitle).toBeTruthy();
+    expect(trends.mostSubmittedArticle?.submissionCount).toBeGreaterThanOrEqual(1);
+
+    // 2. Most REDs in which source
+    expect(trends.topRedSource).toBeTruthy();
+    expect(trends.topRedSource?.source).toBe('IDAMS');
+    expect(trends.topRedSource?.redCount).toBeGreaterThan(0);
+    expect(trends.topRedSource?.isTopSource).toBe(true);
+
+    // 3. UI section rendering
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
+    expect(text).toContain('Screening Trends Analysis');
+    expect(text).toContain('Most Submitted Article');
+    expect(text).toContain('Highest RED Risk Source');
+    expect(text).toContain('Top Repeating Articles in Report');
+    expect(text).toContain('RED Escalations by Ingest Source');
+
+    // 4. Reactive to report switching
+    comp['selectedReport'].set('BlockedArticle');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const blockedTrends = comp['trendsSummary']();
+    expect(blockedTrends.hasData).toBe(true);
+    expect(blockedTrends.mostSubmittedArticle).toBeTruthy();
+    // In BlockedArticle report, all records have Red status
+    expect(blockedTrends.mostSubmittedArticle?.redCount).toBe(blockedTrends.mostSubmittedArticle?.submissionCount);
   });
 });
