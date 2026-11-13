@@ -81,13 +81,13 @@ export class AdminConfigComponent {
       if (this.toastMessage() === message) {
         this.toastMessage.set(null);
       }
-    }, 4500);
+    }, 5000);
   }
 
   protected onToggleSource(source: WatchlistSourceConfig): void {
     this.dataService.toggleWatchlistSource(source.id);
     const nextState = !source.enabled ? 'enabled' : 'disabled';
-    this.showToast(`${source.code} watchlist source ${nextState}.`);
+    this.showToast(`Watchlist source "${source.name}" ${nextState}. Updated engine status.`);
   }
 
   protected onAddRestrictedLocation(): void {
@@ -96,19 +96,20 @@ export class AdminConfigComponent {
     if (!country || !city) return;
 
     const iso = (this.newIsoCode().trim() || country.slice(0, 2)).toUpperCase();
+    const list = this.newListSource();
     this.dataService.addRestrictedLocation({
       country,
       isoCode: iso,
       city,
       riskLevel: this.newRiskLevel(),
-      listSource: this.newListSource(),
+      listSource: list,
     });
 
     this.newCountry.set('');
     this.newIsoCode.set('');
     this.newCity.set('');
     this.showToast(
-      `Added ${city}, ${country} (${this.newListSource()}) and synced screening event to Dashboard.`
+      `Data got ingested: Added ${city}, ${country} (${list}) to PCL ruleset and synced to screening engine.`
     );
   }
 
@@ -135,7 +136,7 @@ export class AdminConfigComponent {
     this.palCountry.set('');
     this.palNotes.set('');
     this.showToast(
-      `PAL entry "${fullName}" onboarded and synced to Executive Dashboard.`
+      `Data got ingested: PAL author "${fullName}" (${country}) onboarded to compliance watchlist.`
     );
   }
 
@@ -151,7 +152,7 @@ export class AdminConfigComponent {
       const parsed = this.parsePalFileContent(content, file.name);
       if (parsed.length > 0) {
         this.dataService.addBulkPalEntries(parsed);
-        this.showToast(`Imported ${parsed.length} PAL entries from "${file.name}".`);
+        this.showToast(`Data got ingested: Imported ${parsed.length} PAL author entries from "${file.name}".`);
       } else {
         // Fallback demo import if file had non-standard format
         this.dataService.addPalEntry({
@@ -164,7 +165,7 @@ export class AdminConfigComponent {
           notes: 'Onboarded via client-side PAL file upload demo.',
           importMethod: 'File Upload',
         });
-        this.showToast(`Processed "${file.name}" and added 1 PAL record.`);
+        this.showToast(`Data got ingested: Processed "${file.name}" and added 1 PAL author record.`);
       }
       input.value = '';
     };
@@ -196,7 +197,7 @@ export class AdminConfigComponent {
     ];
     this.dataService.addBulkPalEntries(sampleBatch);
     this.uploadedFileName.set('pal-weekly-batch-demo.csv');
-    this.showToast('Simulated CSV import: 2 PAL entries onboarded without API.');
+    this.showToast('Data got ingested: 2 PAL author records from weekly batch file ingested into registry.');
   }
 
   private parsePalFileContent(

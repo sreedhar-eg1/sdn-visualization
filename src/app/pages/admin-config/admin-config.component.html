@@ -36,12 +36,45 @@
     </div>
   </div>
 
-  <!-- Toast Feedback -->
+  <!-- Toast Notification (Floating + Inline for complete visibility) -->
   @if (toastMessage(); as msg) {
+    <!-- Floating Toast (Visible regardless of scroll position) -->
+    <aside
+      role="status"
+      aria-live="polite"
+      class="fixed top-5 right-5 z-50 max-w-md pointer-events-auto"
+      style="animation: mc-fade .25s var(--mc-ease)"
+    >
+      <div
+        class="mc-alert ok flex items-start justify-between gap-3 bg-white"
+        style="box-shadow: 0 12px 35px -8px rgba(72,17,17,0.35); border: 2px solid var(--mc-ok); border-radius: var(--mc-r-lg); padding: 14px 18px;"
+      >
+        <div class="flex items-start gap-2.5">
+          <span class="mc-dot mt-1 shrink-0"></span>
+          <div>
+            <span class="mc-eyebrow block" style="color: var(--mc-ok-ink); margin-bottom: 2px">Ingestion Confirmed</span>
+            <div class="font-medium text-xs sm:text-sm" style="color: var(--mc-oxblood); line-height: 1.4;">
+              {{ msg }}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="toastMessage.set(null)"
+          class="mc-link mc-small cursor-pointer text-xs ml-2 shrink-0"
+          style="color: var(--mc-ok-ink)"
+          aria-label="Dismiss notification"
+        >
+          Dismiss
+        </button>
+      </div>
+    </aside>
+
+    <!-- Inline Banner -->
     <div role="status" class="mc-alert ok flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="mc-dot"></span>
-        <span>{{ msg }}</span>
+        <span class="font-medium text-xs sm:text-sm">{{ msg }}</span>
       </div>
       <button
         type="button"
