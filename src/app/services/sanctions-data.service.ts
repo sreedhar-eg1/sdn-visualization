@@ -136,14 +136,12 @@ function buildInitialRecords(today: Date): SanctionsRecord[] {
     const daysAgo = i < 195 ? (i * 90) % 90 : 90 + ((i - 195) * 45) % 45;
     const decisionDate = formatIsoDate(addDays(today, -daysAgo));
 
-    // Deterministic weighted source selection
+    // Deterministic weighted source selection across active editorial pipelines
     const sourceMod = (i * 7 + 3) % 100;
     let source: ScreeningSource;
-    if (sourceMod < 35) source = 'PAPERCEPT';
-    else if (sourceMod < 63) source = 'S1M';
-    else if (sourceMod < 83) source = 'IDAMS';
-    else if (sourceMod < 93) source = 'EMS';
-    else source = 'IEEE XPLORE';
+    if (sourceMod < 42) source = 'PAPERCEPT';
+    else if (sourceMod < 72) source = 'S1M';
+    else source = 'IDAMS';
 
     // Category distribution: ~42% PCL, ~36% PAL, ~22% SDN
     const catMod = (i * 11 + 5) % 100;

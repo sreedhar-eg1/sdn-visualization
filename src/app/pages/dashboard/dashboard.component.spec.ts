@@ -189,6 +189,14 @@ describe('DashboardComponent', () => {
     expect(trends.topRedSource?.redCount).toBeGreaterThan(0);
     expect(trends.topRedSource?.isTopSource).toBe(true);
 
+    // Verify EMS and IEEE XPLORE are excluded from trends chart & breakdown
+    const breakdownSources = trends.sourceRedBreakdown.map((s) => s.source);
+    expect(breakdownSources).not.toContain('EMS');
+    expect(breakdownSources).not.toContain('IEEE XPLORE');
+    const chartCategories = comp['trendsSourceChartOptions']().xAxis as { categories: string[] };
+    expect(chartCategories.categories).not.toContain('EMS');
+    expect(chartCategories.categories).not.toContain('IEEE XPLORE');
+
     // 3. UI section rendering
     const el = fixture.nativeElement as HTMLElement;
     const text = el.textContent ?? '';

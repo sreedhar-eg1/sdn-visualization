@@ -260,6 +260,9 @@ export class DashboardComponent {
       }
     }
 
+    // Exclude EMS and IEEE XPLORE from trends
+    const EXCLUDED_TREND_SOURCES = new Set<string>(['EMS', 'IEEE XPLORE']);
+
     // Sort articles by repeating submission count descending, then red count descending
     const sortedArticles: ArticleSubmissionTrend[] = Array.from(docMap.values())
       .map((entry) => ({
@@ -270,7 +273,7 @@ export class DashboardComponent {
         submissionCount: entry.submissionCount,
         redCount: entry.redCount,
         greenCount: entry.greenCount,
-        sources: Array.from(entry.sources),
+        sources: Array.from(entry.sources).filter((s) => !EXCLUDED_TREND_SOURCES.has(s)),
         authors: Array.from(entry.authors),
         primaryAuthor: entry.primaryAuthor,
         latestDate: entry.latestDate,
@@ -280,13 +283,13 @@ export class DashboardComponent {
     const mostSubmittedArticle = sortedArticles[0] ?? null;
     const topSubmittedArticles = sortedArticles.slice(0, 5);
 
-    // Source Red Trends
-    const totalRedAcrossSources = Array.from(sourceStatsMap.values()).reduce(
-      (sum, s) => sum + s.redCount,
-      0
-    );
+    // Source Red Trends (excluding EMS and IEEE XPLORE)
+    const totalRedAcrossSources = Array.from(sourceStatsMap.entries())
+      .filter(([src]) => !EXCLUDED_TREND_SOURCES.has(src))
+      .reduce((sum, [, s]) => sum + s.redCount, 0);
 
     const sourceRedBreakdown: SourceRedTrend[] = Array.from(sourceStatsMap.entries())
+      .filter(([src]) => !EXCLUDED_TREND_SOURCES.has(src))
       .map(([src, stat]) => ({
         source: src,
         redCount: stat.redCount,
@@ -552,7 +555,9 @@ export class DashboardComponent {
   // Trends Section Chart: RED Escalations by Source (Bar chart on dark cocoa card)
   protected readonly trendsSourceChartOptions = computed<Highcharts.Options>(() => {
     const trends = this.trendsSummary();
-    const sources = trends.sourceRedBreakdown;
+    const sources = trends.sourceRedBreakdown.filter(
+      (s) => s.source !== 'EMS' && s.source !== 'IEEE XPLORE'
+    );
 
     const categories = sources.map((s) => s.source);
     const redData = sources.map((s) => s.redCount);
