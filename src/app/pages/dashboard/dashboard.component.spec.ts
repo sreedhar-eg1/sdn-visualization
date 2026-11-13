@@ -125,4 +125,36 @@ describe('DashboardComponent', () => {
 
     expect(el.textContent).not.toBe(allEventsText);
   });
+
+  it('should render all new custom report options in the reports dropdown', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const reportsSelect = el.querySelector('#reportsFilter') as HTMLSelectElement;
+    expect(reportsSelect).toBeTruthy();
+
+    const optionValues = Array.from(reportsSelect.options).map((o) => o.value);
+    const expected = [
+      'ScreenedAuthor',
+      'SanctionedDocumentsDetails',
+      'BlockedArticle',
+      'JournalStats',
+      'DocumentHistory',
+      'AuthorsHistory',
+      'Document History',
+      'Authors History',
+    ];
+
+    expect(optionValues).toEqual(expected);
+
+    // Verify changing selection
+    reportsSelect.value = 'SanctionedDocumentsDetails';
+    reportsSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['selectedReport']()).toBe('SanctionedDocumentsDetails');
+    expect(el.textContent).toContain('SanctionedDocumentsDetails');
+  });
 });

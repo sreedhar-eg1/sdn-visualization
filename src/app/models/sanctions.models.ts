@@ -15,11 +15,14 @@ export type DateRangePreset =
   | 'CUSTOM';
 
 export type ReportType =
-  | 'EXECUTIVE_OVERVIEW'
-  | 'COUNTRY_SPECIFIC'
-  | 'PAL_AUTHOR_REPORT'
-  | 'SOURCE_AUDIT'
-  | 'SDN_COMPLIANCE';
+  | 'ScreenedAuthor'
+  | 'SanctionedDocumentsDetails'
+  | 'BlockedArticle'
+  | 'JournalStats'
+  | 'DocumentHistory'
+  | 'AuthorsHistory'
+  | 'Document History'
+  | 'Authors History';
 
 export interface SanctionsRecord {
   id: string;

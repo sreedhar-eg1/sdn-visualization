@@ -182,41 +182,15 @@
     </div>
 
     <!-- Contextual Report Strip -->
-    @if (selectedReport() !== 'EXECUTIVE_OVERVIEW') {
+    @if (selectedReport(); as rep) {
       <div class="mc-tile mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <span class="mc-tag info">Report Focus</span>
-          @if (selectedReport() === 'COUNTRY_SPECIFIC') {
-            <div class="flex items-center gap-2">
-              <span class="mc-label" style="margin: 0">Country Filter:</span>
-              <select
-                id="countryFocus"
-                [ngModel]="selectedReportCountry()"
-                (ngModelChange)="selectedReportCountry.set($event)"
-                class="mc-select py-1 text-xs"
-                style="width: auto"
-              >
-                <option value="ALL">All Jurisdictions</option>
-                @for (country of availableCountries(); track country) {
-                  <option [value]="country">{{ country }}</option>
-                }
-              </select>
-            </div>
-          } @else {
-            <span class="mc-body text-sm">
-              Prepared view for
-              <strong class="font-semibold">
-                {{
-                  selectedReport() === 'PAL_AUTHOR_REPORT'
-                    ? 'PAL / Author Escalation Report'
-                    : selectedReport() === 'SOURCE_AUDIT'
-                      ? 'Source Audit Summary'
-                      : 'SDN Compliance Brief'
-                }}
-              </strong>
-              ({{ filteredRecords().length }} matching events)
-            </span>
-          }
+          <span class="mc-body text-sm">
+            Active view:
+            <strong class="font-semibold">{{ rep }}</strong>
+            ({{ filteredRecords().length }} records ready for export)
+          </span>
         </div>
 
         <button
@@ -224,7 +198,7 @@
           (click)="exportReportBriefCsv()"
           class="mc-btn mc-btn-sm"
         >
-          <span>Download Report CSV</span>
+          <span>Export {{ rep }} CSV</span>
           <span class="arr">&rarr;</span>
         </button>
       </div>

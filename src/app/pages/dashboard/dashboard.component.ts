@@ -43,7 +43,7 @@ export class DashboardComponent {
   protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
   protected readonly startDate = signal<string>(this.initialRange.start);
   protected readonly endDate = signal<string>(this.initialRange.end);
-  protected readonly selectedReport = signal<ReportType>('EXECUTIVE_OVERVIEW');
+  protected readonly selectedReport = signal<ReportType>('ScreenedAuthor');
   protected readonly selectedReportCountry = signal<string>('ALL');
   protected readonly uploadStatusMessage = signal<string | null>(null);
   protected readonly isDraggingFiles = signal<boolean>(false);
@@ -77,11 +77,14 @@ export class DashboardComponent {
     label: string;
     value: ReportType;
   }> = [
-    { label: 'Executive Overview', value: 'EXECUTIVE_OVERVIEW' },
-    { label: 'Country Specific Report', value: 'COUNTRY_SPECIFIC' },
-    { label: 'PAL / Author Escalation Report', value: 'PAL_AUTHOR_REPORT' },
-    { label: 'Source Audit Summary', value: 'SOURCE_AUDIT' },
-    { label: 'SDN Compliance Brief', value: 'SDN_COMPLIANCE' },
+    { label: 'ScreenedAuthor', value: 'ScreenedAuthor' },
+    { label: 'SanctionedDocumentsDetails', value: 'SanctionedDocumentsDetails' },
+    { label: 'BlockedArticle', value: 'BlockedArticle' },
+    { label: 'JournalStats', value: 'JournalStats' },
+    { label: 'DocumentHistory', value: 'DocumentHistory' },
+    { label: 'AuthorsHistory', value: 'AuthorsHistory' },
+    { label: 'Document History', value: 'Document History' },
+    { label: 'Authors History', value: 'Authors History' },
   ];
 
   // Filtered dataset based on DatasetMode + Source + Date Range + optional Report country focus
@@ -100,13 +103,6 @@ export class DashboardComponent {
         return false;
       }
       if (end && record.decisionDate > end) {
-        return false;
-      }
-      if (
-        report === 'COUNTRY_SPECIFIC' &&
-        reportCountry !== 'ALL' &&
-        record.country !== reportCountry
-      ) {
         return false;
       }
       return true;
@@ -764,9 +760,6 @@ export class DashboardComponent {
 
   protected onReportChange(report: ReportType): void {
     this.selectedReport.set(report);
-    if (report !== 'COUNTRY_SPECIFIC') {
-      this.selectedReportCountry.set('ALL');
-    }
   }
 
   protected resetFilters(): void {
@@ -775,7 +768,7 @@ export class DashboardComponent {
     const range = this.dataService.getDateRangeForPreset('ALL_DATES');
     this.startDate.set(range.start);
     this.endDate.set(range.end);
-    this.selectedReport.set('EXECUTIVE_OVERVIEW');
+    this.selectedReport.set('ScreenedAuthor');
     this.selectedReportCountry.set('ALL');
   }
 
@@ -800,11 +793,21 @@ export class DashboardComponent {
   protected exportReportBriefCsv(): void {
     const report = this.selectedReport();
     let records = this.filteredRecords();
-    if (report === 'PAL_AUTHOR_REPORT') {
-      records = records.filter((r) => recordHasCategory(r, 'PAL'));
-    } else if (report === 'SDN_COMPLIANCE') {
-      records = records.filter((r) => recordHasCategory(r, 'SDN'));
+
+    if (report === 'SanctionedDocumentsDetails') {
+      records = records.filter(
+        (r) => r.status === 'Red' || (r.matchedTerms && r.matchedTerms.length > 0)
+      );
+    } else if (report === 'BlockedArticle') {
+      records = records.filter((r) => r.status === 'Red');
+    } else if (report === 'DocumentHistory' || report === 'Document History') {
+      records = [...records].sort((a, b) => b.decisionDate.localeCompare(a.decisionDate));
+    } else if (report === 'AuthorsHistory' || report === 'Authors History') {
+      records = [...records].sort((a, b) => a.authorName.localeCompare(b.authorName));
     }
-    exportRecordsToCsv(records, `report-${report.toLowerCase()}`);
+
+    const safeReportName = report.toLowerCase().replace(/\s+/g, '-');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    exportRecordsToCsv(records, `report-${safeReportName}-${timestamp}.csv`);
   }
 }
