@@ -221,34 +221,86 @@ export class DashboardComponent {
     const greenSeries = sorted.map(([, counts]) => counts.green);
 
     return {
-      chart: { type: 'column', height: 300 },
+      chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'PCL Breakdown by Country',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '400',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Prohibited Country List events split by Red (Flagged) vs Green (Cleared)',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '13px',
+          color: 'rgba(72, 17, 17, 0.62)',
+        },
+      },
+      credits: { enabled: false },
       xAxis: {
         categories,
-        crosshair: true,
-        labels: { style: { color: '#475569', fontSize: '11px', fontWeight: '500' } },
+        crosshair: false,
+        lineColor: 'rgba(72, 17, 17, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.75)',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
       },
       yAxis: {
         min: 0,
         allowDecimals: false,
-        title: { text: 'PCL Events', style: { color: '#64748b', fontSize: '11px' } },
+        title: {
+          text: 'PCL Events',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.62)',
+            fontSize: '11px',
+          },
+        },
         stackLabels: {
           enabled: true,
-          style: { fontWeight: '600', color: '#1e293b', fontSize: '11px' },
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: '600',
+            color: '#481111',
+            fontSize: '11px',
+          },
         },
-        gridLineColor: '#e2e8f0',
+        gridLineColor: 'rgba(72, 17, 17, 0.10)',
       },
       legend: {
         enabled: true,
         align: 'right',
         verticalAlign: 'top',
-        itemStyle: { fontSize: '11px', color: '#475569' },
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#481111',
+        },
       },
-      tooltip: { shared: true },
+      tooltip: {
+        shared: true,
+        shadow: false,
+        borderWidth: 1,
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        backgroundColor: '#FFFFFF',
+        style: { fontFamily: "'Inter', sans-serif", color: '#1D0E0A', fontSize: '12px' },
+      },
       plotOptions: {
         column: {
           stacking: 'normal',
           borderRadius: 4,
           borderWidth: 0,
+          shadow: false,
         },
       },
       series: [
@@ -257,20 +309,20 @@ export class DashboardComponent {
           name: 'Red (Flagged)',
           type: 'column',
           data: redSeries,
-          color: '#e11d48',
+          color: '#B5524A',
         },
         {
           id: 'pcl-green',
           name: 'Green (Cleared)',
           type: 'column',
           data: greenSeries,
-          color: '#10b981',
+          color: '#3E7D69',
         },
       ],
     };
   });
 
-  // Chart 2: Flag Events by Source (Column/Bar chart)
+  // Chart 2: Flag Events by Source (Column/Bar chart on dark cocoa card)
   protected readonly sourceChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
     const sources = this.dataService.availableSources();
@@ -286,31 +338,84 @@ export class DashboardComponent {
     }));
 
     return {
-      chart: { type: 'column', height: 300 },
+      chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'Flag Events by Source',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '400',
+          color: '#FFFFFF',
+        },
+      },
+      subtitle: {
+        text: 'Screening volume & Red escalations across ingest pipelines',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '13px',
+          color: 'rgba(255, 255, 255, 0.70)',
+        },
+      },
+      credits: { enabled: false },
       xAxis: {
         categories: counts.map((c) => c.name),
-        labels: { style: { color: '#475569', fontSize: '11px', fontWeight: '600' } },
+        lineColor: 'rgba(255, 255, 255, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
       },
       yAxis: {
         min: 0,
         allowDecimals: false,
-        title: { text: 'Flag Events', style: { color: '#64748b', fontSize: '11px' } },
-        gridLineColor: '#e2e8f0',
+        title: {
+          text: 'Flag Events',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(255, 255, 255, 0.70)',
+            fontSize: '11px',
+          },
+        },
+        gridLineColor: 'rgba(255, 255, 255, 0.12)',
       },
       legend: {
         enabled: true,
         align: 'right',
         verticalAlign: 'top',
-        itemStyle: { fontSize: '11px', color: '#475569' },
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#FFFFFF',
+        },
       },
-      tooltip: { shared: true },
+      tooltip: {
+        shared: true,
+        shadow: false,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.20)',
+        backgroundColor: '#3E2923',
+        style: { fontFamily: "'Inter', sans-serif", color: '#FFFFFF', fontSize: '12px' },
+      },
       plotOptions: {
         column: {
           borderRadius: 4,
           borderWidth: 0,
+          shadow: false,
           dataLabels: {
             enabled: true,
-            style: { fontSize: '11px', fontWeight: '600', textOutline: 'none' },
+            style: {
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '11px',
+              fontWeight: '500',
+              color: '#FFFFFF',
+              textOutline: 'none',
+            },
           },
         },
       },
@@ -320,20 +425,20 @@ export class DashboardComponent {
           name: 'Total Flag Events',
           type: 'column',
           data: counts.map((c) => c.total),
-          color: '#0c2752',
+          color: '#E6D0B5',
         },
         {
           id: 'src-red',
           name: 'Red Status',
           type: 'column',
           data: counts.map((c) => c.red),
-          color: '#e11d48',
+          color: '#B5524A',
         },
       ],
     };
   });
 
-  // Chart 3: Reason Mix (Pie chart)
+  // Chart 3: Reason Mix (Pie chart on dark cocoa card)
   protected readonly reasonMixChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
     const palCount = recs.filter((r) => recordHasCategory(r, 'PAL')).length;
@@ -341,25 +446,61 @@ export class DashboardComponent {
     const sdnCount = recs.filter((r) => recordHasCategory(r, 'SDN')).length;
 
     return {
-      chart: { type: 'pie', height: 300 },
+      chart: { type: 'pie', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'Reason Mix Distribution',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '400',
+          color: '#FFFFFF',
+        },
+      },
+      subtitle: {
+        text: 'Proportional share of PAL, PCL, and SDN watchlist triggers',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '13px',
+          color: 'rgba(255, 255, 255, 0.70)',
+        },
+      },
+      credits: { enabled: false },
       tooltip: {
         pointFormat: '<b>{point.y}</b> triggers ({point.percentage:.1f}%)',
+        shadow: false,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.20)',
+        backgroundColor: '#3E2923',
+        style: { fontFamily: "'Inter', sans-serif", color: '#FFFFFF', fontSize: '12px' },
       },
       plotOptions: {
         pie: {
           allowPointSelect: true,
           cursor: 'pointer',
-          innerSize: '52%',
+          innerSize: '54%',
+          borderWidth: 0,
+          shadow: false,
           dataLabels: {
             enabled: true,
             format: '<b>{point.name}</b>: {point.percentage:.1f}%',
-            style: { fontSize: '11px', color: '#334155', textOutline: 'none' },
+            style: {
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '11px',
+              color: '#FFFFFF',
+              textOutline: 'none',
+            },
           },
           showInLegend: true,
         },
       },
       legend: {
-        itemStyle: { fontSize: '11px', color: '#475569' },
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: 'rgba(255, 255, 255, 0.85)',
+        },
       },
       series: [
         {
@@ -370,17 +511,17 @@ export class DashboardComponent {
             {
               name: 'PCL (Prohibited Country List)',
               y: pclCount,
-              color: '#f59e0b',
+              color: '#A86A1E',
             },
             {
               name: 'PAL (Prohibited Author List)',
               y: palCount,
-              color: '#2563eb',
+              color: '#BBCDC6',
             },
             {
               name: 'SDN (Watchlist / OFAC)',
               y: sdnCount,
-              color: '#7c3aed',
+              color: '#E6D0B5',
             },
           ],
         },
@@ -388,7 +529,7 @@ export class DashboardComponent {
     };
   });
 
-  // Chart 4: Daily Decision Events (Spline chart)
+  // Chart 4: Daily Decision Events (Spline chart on white card)
   protected readonly dailyTrendChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
     const dayMap = new Map<string, { total: number; red: number; green: number }>();
@@ -405,29 +546,75 @@ export class DashboardComponent {
     const labels = sortedDays.map((iso) => iso.slice(5));
 
     return {
-      chart: { type: 'spline', height: 300 },
+      chart: { type: 'spline', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'Daily Decision Events Trend',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '400',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Daily screening trajectory across Total, Red Flagged, and Green Cleared decisions',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '13px',
+          color: 'rgba(72, 17, 17, 0.62)',
+        },
+      },
+      credits: { enabled: false },
       xAxis: {
         categories: labels,
         tickInterval: Math.max(1, Math.floor(labels.length / 8)),
-        labels: { style: { color: '#475569', fontSize: '11px' } },
+        lineColor: 'rgba(72, 17, 17, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.75)',
+            fontSize: '11px',
+          },
+        },
       },
       yAxis: {
         min: 0,
         allowDecimals: false,
-        title: { text: 'Decision Events', style: { color: '#64748b', fontSize: '11px' } },
-        gridLineColor: '#e2e8f0',
+        title: {
+          text: 'Decision Events',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.62)',
+            fontSize: '11px',
+          },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.10)',
       },
       legend: {
         enabled: true,
         align: 'right',
         verticalAlign: 'top',
-        itemStyle: { fontSize: '11px', color: '#475569' },
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#481111',
+        },
       },
-      tooltip: { shared: true },
+      tooltip: {
+        shared: true,
+        shadow: false,
+        borderWidth: 1,
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        backgroundColor: '#FFFFFF',
+        style: { fontFamily: "'Inter', sans-serif", color: '#1D0E0A', fontSize: '12px' },
+      },
       plotOptions: {
         spline: {
           lineWidth: 2.5,
           marker: { enabled: sortedDays.length <= 20, radius: 4 },
+          shadow: false,
         },
       },
       series: [
@@ -436,21 +623,21 @@ export class DashboardComponent {
           name: 'Total Decisions',
           type: 'spline',
           data: sortedDays.map((d) => dayMap.get(d)?.total ?? 0),
-          color: '#0284c7',
+          color: '#3C476A',
         },
         {
           id: 'daily-red',
           name: 'Red Flagged',
           type: 'spline',
           data: sortedDays.map((d) => dayMap.get(d)?.red ?? 0),
-          color: '#e11d48',
+          color: '#B5524A',
         },
         {
           id: 'daily-green',
           name: 'Green Cleared',
           type: 'spline',
           data: sortedDays.map((d) => dayMap.get(d)?.green ?? 0),
-          color: '#10b981',
+          color: '#3E7D69',
         },
       ],
     };

@@ -1,55 +1,52 @@
-<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-  <!-- Admin Page Header Banner -->
-  <section
-    class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-  >
-    <div>
-      <div class="flex items-center gap-2.5">
-        <h2 class="text-lg sm:text-xl font-bold text-slate-900">
-          Admin Configuration &amp; Watchlist Onboarding
-        </h2>
-      </div>
-      <p class="text-xs sm:text-sm text-slate-600 mt-1">
-        Configure screening data sources, manage restricted jurisdictions, and onboard Prohibited Author List (PAL) entries directly without API dependencies.
-      </p>
-    </div>
+<!-- Admin Page Head -->
+<section class="mc-page-head">
+  <span class="mc-eyebrow">— Internal Demo Module &bull; Regulatory Controls</span>
+  <h1 class="mc-display">Admin Configuration &amp; Watchlist Onboarding</h1>
+  <p class="mc-lead">
+    Configure screening sources, maintain restricted jurisdictions for the Prohibited Country List (PCL), and onboard custom Prohibited Author List (PAL) records directly without API dependencies.
+  </p>
+</section>
 
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-        <span class="text-slate-500">Active Sources:</span>
-        <strong class="ml-1 text-slate-900">{{ enabledSourceCount() }}</strong>
-      </div>
-      <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-        <span class="text-slate-500">Restricted Jurisdictions:</span>
-        <strong class="ml-1 text-slate-900">{{ activeLocationCount() }}</strong>
-      </div>
-      <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-        <span class="text-slate-500">PAL Entries:</span>
-        <strong class="ml-1 text-slate-900">{{ dataService.palEntries().length }}</strong>
-      </div>
-      <a
-        routerLink="/dashboard"
-        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0c2752] hover:bg-[#11356c] text-white text-xs font-semibold transition-colors"
-      >
-        <span>View Live Dashboard &rarr;</span>
-      </a>
+<div class="space-y-6">
+  <!-- Stat Tiles Strip -->
+  <div class="mc-grid-4">
+    <div class="mc-card mc-stat">
+      <div class="n">{{ enabledSourceCount() }}</div>
+      <div class="k">Active Sources Enabled</div>
     </div>
-  </section>
+    <div class="mc-card mc-stat">
+      <div class="n">{{ activeLocationCount() }}</div>
+      <div class="k">Restricted Jurisdictions</div>
+    </div>
+    <div class="mc-card mc-stat">
+      <div class="n">{{ dataService.palEntries().length }}</div>
+      <div class="k">PAL Author Entries</div>
+    </div>
+    <div class="mc-card mc-stat flex flex-col justify-between">
+      <div>
+        <div class="n" style="font-size: 22px">Live Console</div>
+        <div class="k">Return to Dashboard</div>
+      </div>
+      <div class="mt-3">
+        <a routerLink="/dashboard" class="mc-btn mc-btn-sm w-full text-center">
+          <span>View Dashboard</span>
+          <span class="arr">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Feedback -->
   @if (toastMessage(); as msg) {
-    <div
-      role="status"
-      class="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 shadow-xs"
-    >
-      <div class="flex items-center gap-2 text-xs sm:text-sm font-medium">
-        <span class="h-2 w-2 rounded-full bg-emerald-600"></span>
+    <div role="status" class="mc-alert ok flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="mc-dot"></span>
         <span>{{ msg }}</span>
       </div>
       <button
         type="button"
         (click)="toastMessage.set(null)"
-        class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 cursor-pointer"
+        class="mc-link mc-small cursor-pointer"
       >
         Dismiss
       </button>
@@ -57,53 +54,43 @@
   }
 
   <!-- 1. Source Enablement Section -->
-  <section class="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-    <div class="border-b border-slate-100 pb-3 mb-4">
-      <h3 class="text-base font-bold text-slate-900">1. Source Enablement</h3>
-      <p class="text-xs text-slate-500 mt-0.5">
-        Toggle external regulatory databases, in-house PAL/PCL lists, and manuscript ingestion pipelines.
-      </p>
+  <section class="mc-card space-y-4">
+    <div class="mc-card-head">
+      <div>
+        <span class="mc-eyebrow">— Section 01</span>
+        <h3 class="mc-h3">1. Source Enablement</h3>
+        <p class="mc-small">Toggle external regulatory watchlists, in-house PAL/PCL lists, and manuscript ingestion pipelines.</p>
+      </div>
+      <span class="mc-tag info">{{ enabledSourceCount() }} Enabled</span>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="mc-grid-3">
       @for (grp of sourceGroups(); track grp.group) {
-        <div class="rounded-xl bg-slate-50/70 border border-slate-200 p-4 space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">
-            {{ grp.group }}
-          </h4>
-          <div class="space-y-2.5">
+        <div class="mc-tile space-y-3">
+          <span class="mc-eyebrow">{{ grp.group }}</span>
+          <div class="space-y-2">
             @for (src of grp.items; track src.id) {
               <label
-                class="flex items-start gap-3 p-3 rounded-lg bg-white border transition-colors cursor-pointer"
-                [class]="
-                  src.enabled
-                    ? 'border-sky-200 hover:border-sky-300'
-                    : 'border-slate-200 opacity-75 hover:opacity-100'
-                "
+                class="flex items-start gap-3 p-3 rounded-xl bg-white border cursor-pointer transition-colors block"
+                style="border-color: var(--mc-line)"
               >
                 <input
                   type="checkbox"
                   [checked]="src.enabled"
                   (change)="onToggleSource(src)"
-                  class="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0c2752] focus:ring-sky-500 cursor-pointer"
+                  class="mt-1 mc-check cursor-pointer"
                 />
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+                    <span class="font-medium text-sm truncate">
                       {{ src.name }}
                     </span>
-                    <span
-                      [class]="
-                        src.enabled
-                          ? 'shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200'
-                      "
-                    >
+                    <span [class]="src.enabled ? 'mc-tag ok text-[10px]' : 'mc-tag neutral text-[10px]'">
                       {{ src.enabled ? 'Enabled' : 'Disabled' }}
                     </span>
                   </div>
-                  <p class="text-[11px] text-slate-500 mt-0.5">{{ src.description }}</p>
-                  <div class="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
+                  <p class="mc-small text-xs mt-0.5 line-clamp-2">{{ src.description }}</p>
+                  <div class="flex items-center gap-2 mt-1.5 mc-code text-[11px] opacity-60">
                     <span>{{ src.recordCount.toLocaleString() }} records</span>
                     <span>&bull;</span>
                     <span>Synced: {{ src.lastSynced }}</span>
@@ -118,395 +105,376 @@
   </section>
 
   <!-- 2. Country / City Management & 3. PAL Entry Form -->
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-    <!-- 2. Country / City Management -->
-    <section class="xl:col-span-5 bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col">
-      <div class="border-b border-slate-100 pb-3 mb-4">
-        <h3 class="text-base font-bold text-slate-900">2. Country &amp; City Management (PCL)</h3>
-        <p class="text-xs text-slate-500 mt-0.5">
-          Add restricted countries and cities to the Prohibited Country List ruleset.
-        </p>
+  <div class="mc-grid-2">
+    <!-- 2. Country / City Management (PCL) -->
+    <section class="mc-card space-y-4 flex flex-col justify-between">
+      <div>
+        <div class="mc-card-head">
+          <div>
+            <span class="mc-eyebrow">— Section 02</span>
+            <h3 class="mc-h3">2. Country &amp; City Management (PCL)</h3>
+            <p class="mc-small">Add restricted countries and cities to the Prohibited Country List ruleset.</p>
+          </div>
+        </div>
+
+        <form (ngSubmit)="onAddRestrictedLocation()" class="space-y-3 mb-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <span class="mc-label" style="margin-top: 0">Country Name *</span>
+              <input
+                id="locCountry"
+                name="locCountry"
+                type="text"
+                required
+                [ngModel]="newCountry()"
+                (ngModelChange)="newCountry.set($event)"
+                placeholder="e.g., Belarus"
+                class="mc-input"
+              />
+            </div>
+            <div>
+              <span class="mc-label" style="margin-top: 0">ISO Code</span>
+              <input
+                id="locIso"
+                name="locIso"
+                type="text"
+                maxlength="3"
+                [ngModel]="newIsoCode()"
+                (ngModelChange)="newIsoCode.set($event)"
+                placeholder="BY"
+                class="mc-input uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <span class="mc-label" style="margin-top: 0">City / Region *</span>
+              <input
+                id="locCity"
+                name="locCity"
+                type="text"
+                required
+                [ngModel]="newCity()"
+                (ngModelChange)="newCity.set($event)"
+                placeholder="e.g., Minsk"
+                class="mc-input"
+              />
+            </div>
+
+            <div>
+              <span class="mc-label" style="margin-top: 0">Risk Tier</span>
+              <select
+                id="locRisk"
+                name="locRisk"
+                [ngModel]="newRiskLevel()"
+                (ngModelChange)="newRiskLevel.set($event)"
+                class="mc-select"
+              >
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Elevated">Elevated</option>
+              </select>
+            </div>
+
+            <div>
+              <span class="mc-label" style="margin-top: 0">Rule List</span>
+              <select
+                id="locList"
+                name="locList"
+                [ngModel]="newListSource()"
+                (ngModelChange)="newListSource.set($event)"
+                class="mc-select"
+              >
+                <option value="PCL">PCL</option>
+                <option value="OFAC">OFAC</option>
+                <option value="OFSI">OFSI</option>
+                <option value="DFAT">DFAT</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              [disabled]="!newCountry().trim() || !newCity().trim()"
+              class="mc-btn mc-btn-sm"
+            >
+              <span>+ Add Restricted Location</span>
+              <span class="arr">&rarr;</span>
+            </button>
+          </div>
+        </form>
       </div>
 
-      <form (ngSubmit)="onAddRestrictedLocation()" class="space-y-3 mb-5">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="sm:col-span-2">
-            <label for="locCountry" class="block text-xs font-semibold text-slate-700 mb-1">
-              Country Name <span class="text-rose-600">*</span>
-            </label>
-            <input
-              id="locCountry"
-              name="locCountry"
-              type="text"
-              required
-              [ngModel]="newCountry()"
-              (ngModelChange)="newCountry.set($event)"
-              placeholder="e.g., Belarus"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-          <div>
-            <label for="locIso" class="block text-xs font-semibold text-slate-700 mb-1">
-              ISO Code
-            </label>
-            <input
-              id="locIso"
-              name="locIso"
-              type="text"
-              maxlength="3"
-              [ngModel]="newIsoCode()"
-              (ngModelChange)="newIsoCode.set($event)"
-              placeholder="BY"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label for="locCity" class="block text-xs font-semibold text-slate-700 mb-1">
-              City / Region <span class="text-rose-600">*</span>
-            </label>
-            <input
-              id="locCity"
-              name="locCity"
-              type="text"
-              required
-              [ngModel]="newCity()"
-              (ngModelChange)="newCity.set($event)"
-              placeholder="e.g., Minsk"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-
-          <div>
-            <label for="locRisk" class="block text-xs font-semibold text-slate-700 mb-1">
-              Risk Tier
-            </label>
-            <select
-              id="locRisk"
-              name="locRisk"
-              [ngModel]="newRiskLevel()"
-              (ngModelChange)="newRiskLevel.set($event)"
-              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-sky-500 focus:outline-none"
-            >
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Elevated">Elevated</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="locList" class="block text-xs font-semibold text-slate-700 mb-1">
-              Rule List
-            </label>
-            <select
-              id="locList"
-              name="locList"
-              [ngModel]="newListSource()"
-              (ngModelChange)="newListSource.set($event)"
-              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-sky-500 focus:outline-none"
-            >
-              <option value="PCL">PCL</option>
-              <option value="OFAC">OFAC</option>
-              <option value="OFSI">OFSI</option>
-              <option value="DFAT">DFAT</option>
-            </select>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          [disabled]="!newCountry().trim() || !newCity().trim()"
-          class="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#0c2752] hover:bg-[#11356c] disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
-        >
-          + Add Restricted Country / City
-        </button>
-      </form>
-
       <!-- Active Jurisdictions Table -->
-      <div class="flex-1 overflow-auto max-h-80 border border-slate-200 rounded-lg custom-scrollbar">
-        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
-          <thead class="bg-slate-50 sticky top-0 text-[11px] uppercase text-slate-500 font-semibold">
-            <tr>
-              <th class="px-3 py-2.5">Country / City</th>
-              <th class="px-3 py-2.5">Risk</th>
-              <th class="px-3 py-2.5">List</th>
-              <th class="px-3 py-2.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
-            @for (loc of dataService.restrictedLocations(); track loc.id) {
-              <tr [class]="loc.active ? '' : 'opacity-50 bg-slate-50'">
-                <td class="px-3 py-2.5">
-                  <div class="font-semibold text-slate-900">
-                    {{ loc.country }}
-                    <span class="text-[10px] font-mono text-slate-400">({{ loc.isoCode }})</span>
-                  </div>
-                  <div class="text-slate-500">{{ loc.city }}</div>
-                </td>
-                <td class="px-3 py-2.5">
-                  <span
-                    [class]="
-                      loc.riskLevel === 'Critical'
-                        ? 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200'
-                        : loc.riskLevel === 'High'
-                          ? 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200'
-                          : 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200'
-                    "
-                  >
-                    {{ loc.riskLevel }}
-                  </span>
-                </td>
-                <td class="px-3 py-2.5 font-mono text-[11px] text-slate-700">
-                  {{ loc.listSource }}
-                </td>
-                <td class="px-3 py-2.5 text-right whitespace-nowrap space-x-2">
-                  <button
-                    type="button"
-                    (click)="dataService.toggleRestrictedLocation(loc.id)"
-                    class="text-[11px] font-medium text-sky-700 hover:underline cursor-pointer"
-                  >
-                    {{ loc.active ? 'Pause' : 'Enable' }}
-                  </button>
-                  <button
-                    type="button"
-                    (click)="dataService.removeRestrictedLocation(loc.id)"
-                    class="text-[11px] font-medium text-rose-600 hover:underline cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </td>
+      <div>
+        <span class="mc-eyebrow mb-2 block">Active PCL Locations ({{ dataService.restrictedLocations().length }})</span>
+        <div class="overflow-auto max-h-72 mc-table-wrap border rounded-2xl" style="border-color: var(--mc-line)">
+          <table class="mc-table">
+            <thead>
+              <tr>
+                <th>Country / City</th>
+                <th>Risk</th>
+                <th>List</th>
+                <th style="text-align: right">Actions</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (loc of dataService.restrictedLocations(); track loc.id) {
+                <tr [class.opacity-50]="!loc.active">
+                  <td>
+                    <div class="font-semibold">
+                      {{ loc.country }}
+                      <span class="mc-code mc-small">({{ loc.isoCode }})</span>
+                    </div>
+                    <div class="mc-small">{{ loc.city }}</div>
+                  </td>
+                  <td>
+                    <span
+                      [class]="
+                        loc.riskLevel === 'Critical'
+                          ? 'mc-tag bad'
+                          : loc.riskLevel === 'High'
+                            ? 'mc-tag warn'
+                            : 'mc-tag info'
+                      "
+                    >
+                      {{ loc.riskLevel }}
+                    </span>
+                  </td>
+                  <td class="mc-code mc-small">
+                    {{ loc.listSource }}
+                  </td>
+                  <td style="text-align: right" class="whitespace-nowrap space-x-2">
+                    <button
+                      type="button"
+                      (click)="dataService.toggleRestrictedLocation(loc.id)"
+                      class="mc-link mc-small cursor-pointer"
+                    >
+                      {{ loc.active ? 'Pause' : 'Enable' }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="dataService.removeRestrictedLocation(loc.id)"
+                      class="mc-link mc-small cursor-pointer"
+                      style="color: var(--mc-bad)"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
     <!-- 3. PAL Entry Form (Manual + File Upload) -->
-    <section class="xl:col-span-7 bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col">
-      <div class="border-b border-slate-100 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h3 class="text-base font-bold text-slate-900">
-            3. Prohibited Author List (PAL) Onboarding
-          </h3>
-          <p class="text-xs text-slate-500 mt-0.5">
-            Manually add a prohibited author entry or upload a custom PAL CSV/JSON file without needing an API.
-          </p>
-        </div>
-        <button
-          type="button"
-          (click)="onSimulatePalBatchImport()"
-          class="self-start sm:self-auto px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-semibold transition-colors cursor-pointer"
-        >
-          Simulate CSV Batch Import
-        </button>
-      </div>
-
-      <!-- Manual Entry Form -->
-      <form (ngSubmit)="onAddPalEntry()" class="space-y-3 mb-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <section class="mc-card space-y-4 flex flex-col justify-between">
+      <div>
+        <div class="mc-card-head">
           <div>
-            <label for="palName" class="block text-xs font-semibold text-slate-700 mb-1">
-              Author Full Name <span class="text-rose-600">*</span>
-            </label>
-            <input
-              id="palName"
-              name="palName"
-              type="text"
-              required
-              [ngModel]="palFullName()"
-              (ngModelChange)="palFullName.set($event)"
-              placeholder="e.g., Dr. Hassan Moradi"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
+            <span class="mc-eyebrow">— Section 03</span>
+            <h3 class="mc-h3">3. Prohibited Author List (PAL) Onboarding</h3>
+            <p class="mc-small">Manually add a prohibited author entry or upload a custom PAL CSV file without needing an API.</p>
           </div>
-
-          <div>
-            <label for="palOrcid" class="block text-xs font-semibold text-slate-700 mb-1">
-              Author ID / ORCID
-            </label>
-            <input
-              id="palOrcid"
-              name="palOrcid"
-              type="text"
-              [ngModel]="palAuthorId()"
-              (ngModelChange)="palAuthorId.set($event)"
-              placeholder="ORCID-0000-1234"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-
-          <div>
-            <label for="palCountry" class="block text-xs font-semibold text-slate-700 mb-1">
-              Country <span class="text-rose-600">*</span>
-            </label>
-            <input
-              id="palCountry"
-              name="palCountry"
-              type="text"
-              required
-              [ngModel]="palCountry()"
-              (ngModelChange)="palCountry.set($event)"
-              placeholder="e.g., Iran"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="sm:col-span-2">
-            <label for="palAffil" class="block text-xs font-semibold text-slate-700 mb-1">
-              Affiliation / Institution <span class="text-rose-600">*</span>
-            </label>
-            <input
-              id="palAffil"
-              name="palAffil"
-              type="text"
-              required
-              [ngModel]="palAffiliation()"
-              (ngModelChange)="palAffiliation.set($event)"
-              placeholder="e.g., Institute for Advanced Quantum Systems"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-
-          <div>
-            <label for="palSeverity" class="block text-xs font-semibold text-slate-700 mb-1">
-              Disposition Severity
-            </label>
-            <select
-              id="palSeverity"
-              name="palSeverity"
-              [ngModel]="palSeverity()"
-              (ngModelChange)="palSeverity.set($event)"
-              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-sky-500 focus:outline-none"
-            >
-              <option value="Red">Red — Hard Block</option>
-              <option value="Amber">Amber — Secondary Review</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <div class="sm:col-span-2">
-            <label for="palNotes" class="block text-xs font-semibold text-slate-700 mb-1">
-              Compliance Justification / Notes
-            </label>
-            <input
-              id="palNotes"
-              name="palNotes"
-              type="text"
-              [ngModel]="palNotes()"
-              (ngModelChange)="palNotes.set($event)"
-              placeholder="Reason for inclusion on internal PAL..."
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-
           <button
-            type="submit"
-            [disabled]="!palFullName().trim() || !palAffiliation().trim() || !palCountry().trim()"
-            class="w-full px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+            type="button"
+            (click)="onSimulatePalBatchImport()"
+            class="mc-btn mc-btn-ghost mc-btn-sm"
           >
-            + Add PAL Entry
+            Simulate Batch
           </button>
         </div>
-      </form>
 
-      <!-- File Upload Mimic Box -->
-      <div
-        class="mb-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-      >
-        <div>
-          <div class="text-xs font-semibold text-slate-800">
-            Upload Custom PAL File (CSV / JSON)
+        <!-- Manual Entry Form -->
+        <form (ngSubmit)="onAddPalEntry()" class="space-y-3 mb-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <span class="mc-label" style="margin-top: 0">Author Full Name *</span>
+              <input
+                id="palName"
+                name="palName"
+                type="text"
+                required
+                [ngModel]="palFullName()"
+                (ngModelChange)="palFullName.set($event)"
+                placeholder="e.g., Dr. Hassan Moradi"
+                class="mc-input"
+              />
+            </div>
+
+            <div>
+              <span class="mc-label" style="margin-top: 0">Author ID / ORCID</span>
+              <input
+                id="palOrcid"
+                name="palOrcid"
+                type="text"
+                [ngModel]="palAuthorId()"
+                (ngModelChange)="palAuthorId.set($event)"
+                placeholder="ORCID-0000-1234"
+                class="mc-input mc-code"
+              />
+            </div>
+
+            <div>
+              <span class="mc-label" style="margin-top: 0">Country *</span>
+              <input
+                id="palCountry"
+                name="palCountry"
+                type="text"
+                required
+                [ngModel]="palCountry()"
+                (ngModelChange)="palCountry.set($event)"
+                placeholder="e.g., Iran"
+                class="mc-input"
+              />
+            </div>
           </div>
-          <p class="text-[11px] text-slate-500">
-            Columns: <code class="font-mono">Full Name, Author ID, Affiliation, Country, Severity, Notes</code>
-            @if (uploadedFileName(); as fname) {
-              <span class="ml-2 text-emerald-700 font-medium">Last file: {{ fname }}</span>
-            }
-          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <span class="mc-label" style="margin-top: 0">Affiliation / Institution *</span>
+              <input
+                id="palAffil"
+                name="palAffil"
+                type="text"
+                required
+                [ngModel]="palAffiliation()"
+                (ngModelChange)="palAffiliation.set($event)"
+                placeholder="e.g., Institute for Advanced Quantum Systems"
+                class="mc-input"
+              />
+            </div>
+
+            <div>
+              <span class="mc-label" style="margin-top: 0">Disposition Severity</span>
+              <select
+                id="palSeverity"
+                name="palSeverity"
+                [ngModel]="palSeverity()"
+                (ngModelChange)="palSeverity.set($event)"
+                class="mc-select"
+              >
+                <option value="Red">Red — Hard Block</option>
+                <option value="Amber">Amber — Review</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <div class="sm:col-span-2">
+              <span class="mc-label" style="margin-top: 0">Compliance Justification</span>
+              <input
+                id="palNotes"
+                name="palNotes"
+                type="text"
+                [ngModel]="palNotes()"
+                (ngModelChange)="palNotes.set($event)"
+                placeholder="Reason for inclusion on internal PAL..."
+                class="mc-input"
+              />
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="!palFullName().trim() || !palAffiliation().trim() || !palCountry().trim()"
+              class="mc-btn mc-btn-sm"
+            >
+              <span>+ Add PAL Entry</span>
+              <span class="arr">&rarr;</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- File Upload Mimic Box -->
+        <div class="mc-tile flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <div class="font-semibold text-xs">
+              Upload Custom PAL File (CSV / JSON)
+            </div>
+            <p class="mc-small text-xs mt-0.5">
+              Columns: <span class="mc-code">Full Name, Author ID, Affiliation, Country, Severity, Notes</span>
+              @if (uploadedFileName(); as fname) {
+                <span class="mc-tag ok ml-2">Last file: {{ fname }}</span>
+              }
+            </p>
+          </div>
+          <label class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer shrink-0">
+            <span>Choose File</span>
+            <input
+              type="file"
+              accept=".csv,.txt,.json"
+              (change)="onPalFileSelected($event)"
+              class="sr-only"
+            />
+          </label>
         </div>
-        <label
-          class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-700 cursor-pointer shrink-0"
-        >
-          <span>Choose File</span>
-          <input
-            type="file"
-            accept=".csv,.txt,.json"
-            (change)="onPalFileSelected($event)"
-            class="sr-only"
-          />
-        </label>
       </div>
 
-      <!-- PAL Registry Search & Table -->
-      <div class="flex items-center justify-between gap-3 mb-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">
-          Active PAL Registry ({{ filteredPalEntries().length }})
-        </h4>
-        <input
-          type="text"
-          [ngModel]="palSearch()"
-          (ngModelChange)="palSearch.set($event)"
-          placeholder="Filter PAL entries..."
-          class="w-48 sm:w-60 rounded-lg border border-slate-300 px-3 py-1 text-xs focus:border-sky-500 focus:outline-none"
-        />
-      </div>
+      <!-- PAL Registry Table -->
+      <div>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="mc-eyebrow">PAL Registry ({{ filteredPalEntries().length }})</span>
+          <div class="mc-search" style="max-width: 220px">
+            <input
+              type="text"
+              [ngModel]="palSearch()"
+              (ngModelChange)="palSearch.set($event)"
+              placeholder="Search PAL..."
+              class="mc-input text-xs py-1.5"
+            />
+          </div>
+        </div>
 
-      <div class="flex-1 overflow-auto max-h-64 border border-slate-200 rounded-lg custom-scrollbar">
-        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
-          <thead class="bg-slate-50 sticky top-0 text-[11px] uppercase text-slate-500 font-semibold">
-            <tr>
-              <th class="px-3 py-2.5">Author</th>
-              <th class="px-3 py-2.5">Affiliation &amp; Country</th>
-              <th class="px-3 py-2.5">Severity</th>
-              <th class="px-3 py-2.5">Origin</th>
-              <th class="px-3 py-2.5 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
-            @for (entry of filteredPalEntries(); track entry.id) {
-              <tr class="hover:bg-slate-50">
-                <td class="px-3 py-2.5">
-                  <div class="font-semibold text-slate-900">{{ entry.fullName }}</div>
-                  <div class="font-mono text-[11px] text-slate-500">{{ entry.authorId }}</div>
-                </td>
-                <td class="px-3 py-2.5">
-                  <div class="text-slate-800">{{ entry.affiliation }}</div>
-                  <div class="text-[11px] text-slate-500">{{ entry.country }}</div>
-                </td>
-                <td class="px-3 py-2.5">
-                  <span
-                    [class]="
-                      entry.severity === 'Red'
-                        ? 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800 border border-rose-200'
-                        : 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200'
-                    "
-                  >
-                    {{ entry.severity }}
-                  </span>
-                </td>
-                <td class="px-3 py-2.5">
-                  <div class="text-[11px] font-medium text-slate-700">{{ entry.importMethod }}</div>
-                  <div class="text-[10px] text-slate-400">{{ entry.addedAt }}</div>
-                </td>
-                <td class="px-3 py-2.5 text-right">
-                  <button
-                    type="button"
-                    (click)="dataService.removePalEntry(entry.id)"
-                    class="text-[11px] font-medium text-rose-600 hover:underline cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </td>
+        <div class="overflow-auto max-h-56 mc-table-wrap border rounded-2xl" style="border-color: var(--mc-line)">
+          <table class="mc-table">
+            <thead>
+              <tr>
+                <th>Author</th>
+                <th>Affiliation &amp; Country</th>
+                <th>Severity</th>
+                <th>Origin</th>
+                <th style="text-align: right">Action</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (entry of filteredPalEntries(); track entry.id) {
+                <tr>
+                  <td>
+                    <div class="font-semibold">{{ entry.fullName }}</div>
+                    <div class="mc-code mc-small">{{ entry.authorId }}</div>
+                  </td>
+                  <td>
+                    <div>{{ entry.affiliation }}</div>
+                    <div class="mc-small">{{ entry.country }}</div>
+                  </td>
+                  <td>
+                    <span [class]="entry.severity === 'Red' ? 'mc-tag bad' : 'mc-tag warn'">
+                      {{ entry.severity }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="font-medium text-xs">{{ entry.importMethod }}</div>
+                    <div class="mc-small text-[10px]">{{ entry.addedAt }}</div>
+                  </td>
+                  <td style="text-align: right">
+                    <button
+                      type="button"
+                      (click)="dataService.removePalEntry(entry.id)"
+                      class="mc-link mc-small cursor-pointer"
+                      style="color: var(--mc-bad)"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </div>

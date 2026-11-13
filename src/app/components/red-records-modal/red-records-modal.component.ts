@@ -28,33 +28,31 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
   template: `
     @if (context(); as ctx) {
       <div
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-xs p-0 sm:p-4"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        style="background: rgba(29, 14, 10, 0.65); backdrop-filter: blur(4px);"
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="ctx.title + ' - Red Tagged Records'"
         (click)="onBackdropClick($event)"
       >
         <div
-          class="bg-white w-full sm:max-w-6xl max-h-[92vh] sm:max-h-[88vh] rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+          class="bg-white w-full sm:max-w-6xl max-h-[92vh] sm:max-h-[88vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+          style="border: 1px solid var(--mc-line)"
           (click)="$event.stopPropagation()"
         >
-          <!-- Modal Header -->
+          <!-- Modal Header (Dark Cocoa Band) -->
           <div
-            class="bg-[#0c2752] text-white px-5 py-4 flex items-start sm:items-center justify-between gap-4 border-b border-sky-400/20"
+            class="px-6 py-5 flex items-start sm:items-center justify-between gap-4"
+            style="background: linear-gradient(180deg, var(--mc-cocoa) 0%, var(--mc-cocoa-3) 100%); color: #fff;"
           >
             <div>
               <div class="flex items-center gap-2.5 flex-wrap">
-                <span
-                  class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-200 border border-rose-400/40"
-                >
-                  <span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>
-                  RED FLAGGED RECORDS
-                </span>
-                <h2 class="text-base sm:text-lg font-semibold text-white">
+                <span class="mc-tag bad">RED FLAGGED RECORDS</span>
+                <h2 class="mc-h3" style="color: #fff; margin: 0">
                   {{ ctx.title }}
                 </h2>
               </div>
-              <p class="text-xs sm:text-sm text-sky-200/80 mt-1">
+              <p class="mc-lead text-xs sm:text-sm mt-1" style="color: rgba(255,255,255,0.75)">
                 {{ ctx.subtitle }}
               </p>
             </div>
@@ -62,77 +60,66 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
             <button
               type="button"
               (click)="closed.emit()"
-              class="rounded-lg p-1.5 text-sky-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              class="mc-btn mc-btn-ghost mc-btn-sm"
+              style="color: #fff; border-color: rgba(255,255,255,0.3)"
               aria-label="Close modal"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
+              &times;
             </button>
           </div>
 
-          <!-- Toolbar: Category Tabs + Search + Export CSV -->
+          <!-- Toolbar: Category Chips + Search + Export CSV -->
           <div
-            class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"
+            class="px-6 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"
+            style="background: var(--mc-cream); border-bottom: 1px solid var(--mc-line);"
           >
-            <div class="flex flex-wrap items-center gap-1.5">
-              @for (tab of categoryTabs; track tab.value) {
-                <button
-                  type="button"
-                  (click)="activeCategory.set(tab.value)"
-                  [class]="
-                    activeCategory() === tab.value
-                      ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0c2752] text-white shadow-xs cursor-pointer'
-                      : 'px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 cursor-pointer'
-                  "
-                >
-                  {{ tab.label }}
-                  <span class="ml-1 opacity-75">({{ getCategoryCount(tab.value) }})</span>
-                </button>
-              }
-              @if (coAuthorsOnly()) {
-                <button
-                  type="button"
-                  (click)="coAuthorsOnly.set(false)"
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-pointer"
-                  title="Click to show all Red records including single-author hits"
-                >
-                  Co-author Linked Only &times;
-                </button>
-              }
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="mc-eyebrow">Category:</span>
+              <div class="mc-chips">
+                @for (tab of categoryTabs; track tab.value) {
+                  <button
+                    type="button"
+                    (click)="activeCategory.set(tab.value)"
+                    class="mc-chip"
+                    [class.is-on]="activeCategory() === tab.value"
+                    [attr.aria-pressed]="activeCategory() === tab.value"
+                  >
+                    {{ tab.label }}
+                    <span class="opacity-60 ml-1">({{ getCategoryCount(tab.value) }})</span>
+                  </button>
+                }
+                @if (coAuthorsOnly()) {
+                  <button
+                    type="button"
+                    (click)="coAuthorsOnly.set(false)"
+                    class="mc-tag warn cursor-pointer"
+                    title="Click to show all Red records"
+                  >
+                    Co-author Linked Only &times;
+                  </button>
+                }
+              </div>
             </div>
 
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div class="relative flex-1 sm:w-64">
+              <div class="mc-search flex-1 sm:w-64">
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-width="1.6"
                 >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
                 </svg>
                 <input
                   type="text"
                   [ngModel]="searchTerm()"
                   (ngModelChange)="searchTerm.set($event)"
-                  placeholder="Search doc ID, author, country..."
-                  class="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  placeholder="Search doc, author, country..."
+                  class="mc-input text-xs sm:text-sm py-2"
                 />
               </div>
 
@@ -140,131 +127,122 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
                 type="button"
                 (click)="onExportCsv()"
                 [disabled]="filteredRecords().length === 0"
-                class="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white shadow-xs transition-colors cursor-pointer"
+                class="mc-btn mc-btn-sm"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
                 <span>Export to CSV</span>
+                <span class="arr">&rarr;</span>
               </button>
             </div>
           </div>
 
           <!-- Data Grid -->
-          <div class="flex-1 overflow-auto custom-scrollbar">
+          <div class="flex-1 overflow-auto custom-scrollbar mc-table-wrap">
             @if (filteredRecords().length === 0) {
               <div class="py-16 px-6 text-center">
-                <p class="text-sm font-medium text-slate-700">
+                <p class="mc-body font-semibold">
                   No Red-tagged records match the current filter criteria.
                 </p>
-                <p class="text-xs text-slate-500 mt-1">
+                <p class="mc-small mt-1">
                   Try clearing the search box or switching to "All Red".
                 </p>
               </div>
             } @else {
-              <table class="min-w-full divide-y divide-slate-200 text-left">
-                <thead class="bg-slate-100 sticky top-0 z-10 text-[11px] uppercase tracking-wider text-slate-600 font-semibold">
+              <table class="mc-table">
+                <thead>
                   <tr>
-                    <th class="px-4 py-3">Document</th>
-                    <th class="px-4 py-3">Source</th>
-                    <th class="px-4 py-3">Flagged Author &amp; Affiliation</th>
-                    <th class="px-4 py-3">Jurisdiction</th>
-                    <th class="px-4 py-3">Rule &amp; Match</th>
-                    <th class="px-4 py-3">Risk</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Decision Date</th>
+                    <th>Document</th>
+                    <th>Source</th>
+                    <th>Flagged Author &amp; Affiliation</th>
+                    <th>Jurisdiction</th>
+                    <th>Rule &amp; Match</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                    <th>Decision Date</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm">
+                <tbody>
                   @for (record of filteredRecords(); track record.id) {
-                    <tr class="hover:bg-rose-50/40 transition-colors">
-                      <td class="px-4 py-3 align-top max-w-[240px]">
+                    <tr>
+                      <td class="align-top max-w-[240px]">
                         <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="font-mono text-xs font-semibold text-slate-900">
+                          <span class="mc-code font-bold">
                             {{ record.documentId }}
                           </span>
                           @if (record.dataOrigin === 'UPLOADED_EXCEL') {
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                            <span class="mc-tag neutral text-[10px]">
                               EXCEL
                             </span>
                           }
                         </div>
-                        <div class="text-xs text-slate-600 line-clamp-2 mt-0.5" [title]="record.documentTitle">
+                        <div class="mc-small line-clamp-2 mt-0.5" [title]="record.documentTitle">
                           {{ record.documentTitle }}
                         </div>
                       </td>
-                      <td class="px-4 py-3 align-top whitespace-nowrap">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200"
-                        >
+
+                      <td class="align-top whitespace-nowrap">
+                        <span class="mc-tag neutral">
                           {{ record.source }}
                         </span>
                       </td>
-                      <td class="px-4 py-3 align-top max-w-[240px]">
-                        <div class="font-medium text-slate-900">{{ record.authorName }}</div>
-                        <div class="text-[11px] text-slate-500 font-mono">{{ record.authorId }}</div>
+
+                      <td class="align-top max-w-[240px]">
+                        <div class="t font-semibold">{{ record.authorName }}</div>
+                        <div class="mc-code mc-small">{{ record.authorId }}</div>
                         @if (record.organization) {
-                          <div class="text-[11px] text-slate-600 mt-0.5 truncate" [title]="record.organization">
+                          <div class="mc-small mt-0.5 truncate" [title]="record.organization">
                             {{ record.organization }}
                           </div>
                         }
                         @if (record.coAuthorCount > 0) {
-                          <div class="text-[11px] text-slate-500 mt-0.5">
+                          <div class="mc-small mt-0.5" style="color: var(--mc-warn-ink)">
                             +{{ record.coAuthorCount }} co-author(s): {{ record.coAuthors.join(', ') }}
                           </div>
                         }
                       </td>
-                      <td class="px-4 py-3 align-top whitespace-nowrap">
-                        <div class="font-medium text-slate-800">{{ record.country }}</div>
-                        <div class="text-xs text-slate-500">{{ record.city }}</div>
+
+                      <td class="align-top whitespace-nowrap">
+                        <div class="font-medium">{{ record.country }}</div>
+                        <div class="mc-small">{{ record.city }}</div>
                       </td>
-                      <td class="px-4 py-3 align-top max-w-[230px]">
+
+                      <td class="align-top max-w-[230px]">
                         <div class="flex flex-wrap gap-1">
                           @for (term of record.matchedTerms ?? [record.category]; track term) {
                             <span
                               [class]="
                                 term === 'PAL'
-                                  ? 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  ? 'mc-tag info'
                                   : term === 'PCL'
-                                    ? 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200'
-                                    : 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200'
+                                    ? 'mc-tag warn'
+                                    : 'mc-tag neutral'
                               "
                             >
                               {{ term }}
                             </span>
                           }
                         </div>
-                        <div class="text-[11px] text-slate-600 mt-1">{{ record.reason }}</div>
+                        <div class="mc-small mt-1">{{ record.reason }}</div>
                         @if (record.matchedEntitySummary) {
-                          <div class="text-[10px] text-slate-500 mt-0.5 line-clamp-2" [title]="record.matchedEntitySummary">
+                          <div class="mc-code mc-small mt-0.5 line-clamp-2" [title]="record.matchedEntitySummary">
                             {{ record.matchedEntitySummary }}
                           </div>
                         }
                       </td>
-                      <td class="px-4 py-3 align-top whitespace-nowrap">
-                        <div class="font-semibold text-rose-700">{{ record.riskScore }}/100</div>
-                        <div class="text-[11px] text-slate-500">{{ record.matchedWatchlist }}</div>
+
+                      <td class="align-top whitespace-nowrap">
+                        <div class="font-bold mc-num" style="color: var(--mc-bad-ink)">
+                          {{ record.riskScore }}/100
+                        </div>
+                        <div class="mc-small">{{ record.matchedWatchlist }}</div>
                       </td>
-                      <td class="px-4 py-3 align-top whitespace-nowrap">
-                        <span
-                          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200"
-                        >
-                          <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span>
+
+                      <td class="align-top whitespace-nowrap">
+                        <span class="mc-tag bad">
                           {{ record.status }}
                         </span>
                       </td>
-                      <td class="px-4 py-3 align-top whitespace-nowrap font-mono text-xs text-slate-600">
+
+                      <td class="align-top whitespace-nowrap mc-code mc-small">
                         {{ record.decisionDate }}
                       </td>
                     </tr>
@@ -276,18 +254,35 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
 
           <!-- Modal Footer -->
           <div
-            class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+            class="px-6 py-3 flex flex-wrap items-center justify-between gap-2"
+            style="background: var(--mc-cream); border-top: 1px solid var(--mc-line);"
           >
-            <div>
+            <div class="mc-small">
               Showing
-              <span class="font-semibold text-slate-900">{{ filteredRecords().length }}</span>
+              <strong>{{ filteredRecords().length }}</strong>
               of
-              <span class="font-semibold text-slate-900">{{ redRecords().length }}</span>
-              Red-tagged compliance records in active filter window.
+              <strong>{{ allRedRecords().length }}</strong>
+              Red-tagged records in this selection
             </div>
-            @if (exportMessage()) {
-              <span class="text-emerald-700 font-medium">{{ exportMessage() }}</span>
-            }
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="closed.emit()"
+                class="mc-btn mc-btn-ghost mc-btn-sm"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                (click)="onExportCsv()"
+                [disabled]="filteredRecords().length === 0"
+                class="mc-btn mc-btn-sm"
+              >
+                <span>Export CSV</span>
+                <span class="arr">&rarr;</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -296,33 +291,30 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
 })
 export class RedRecordsModalComponent {
   readonly context = input<KpiModalContext | null>(null);
-  readonly redRecords = input.required<SanctionsRecord[]>();
+  readonly redRecords = input<SanctionsRecord[]>([]);
   readonly closed = output<void>();
 
   protected readonly activeCategory = signal<ScreeningCategory | 'ALL'>('ALL');
+  protected readonly searchTerm = signal<string>('');
   protected readonly coAuthorsOnly = signal<boolean>(false);
-  protected readonly searchTerm = signal('');
-  protected readonly exportMessage = signal('');
 
   protected readonly categoryTabs: ReadonlyArray<{
     label: string;
     value: ScreeningCategory | 'ALL';
   }> = [
     { label: 'All Red', value: 'ALL' },
-    { label: 'PAL', value: 'PAL' },
-    { label: 'PCL', value: 'PCL' },
-    { label: 'SDN', value: 'SDN' },
+    { label: 'PAL (Author)', value: 'PAL' },
+    { label: 'PCL (Country)', value: 'PCL' },
+    { label: 'SDN (Entity)', value: 'SDN' },
   ];
 
   constructor() {
     effect(() => {
       const ctx = this.context();
-      if (ctx) {
-        this.activeCategory.set(ctx.categoryFilter);
-        this.coAuthorsOnly.set(ctx.metricKey === 'coAuthorRecords');
-        this.searchTerm.set('');
-        this.exportMessage.set('');
-      }
+      if (!ctx) return;
+      this.activeCategory.set(ctx.categoryFilter);
+      this.searchTerm.set('');
+      this.coAuthorsOnly.set(ctx.metricKey === 'coAuthorRecords');
     });
   }
 
@@ -339,48 +331,57 @@ export class RedRecordsModalComponent {
     }
   }
 
+  protected readonly allRedRecords = computed<SanctionsRecord[]>(() => {
+    return this.redRecords();
+  });
+
   protected getCategoryCount(category: ScreeningCategory | 'ALL'): number {
-    const base = this.coAuthorsOnly()
-      ? this.redRecords().filter((r) => r.coAuthorCount > 0)
-      : this.redRecords();
-    if (category === 'ALL') return base.length;
-    return base.filter((r) => recordHasCategory(r, category)).length;
+    const list = this.allRedRecords();
+    if (category === 'ALL') return list.length;
+    return list.filter((r) => recordHasCategory(r, category)).length;
   }
 
-  protected readonly filteredRecords = computed(() => {
+  protected readonly filteredRecords = computed<SanctionsRecord[]>(() => {
     const category = this.activeCategory();
-    const onlyCoAuthors = this.coAuthorsOnly();
     const query = this.searchTerm().trim().toLowerCase();
+    const coAuthorsOnly = this.coAuthorsOnly();
 
-    return this.redRecords().filter((record) => {
-      if (onlyCoAuthors && record.coAuthorCount === 0) {
+    return this.allRedRecords().filter((rec) => {
+      if (category !== 'ALL' && !recordHasCategory(rec, category)) {
         return false;
       }
-      if (category !== 'ALL' && !recordHasCategory(record, category)) {
+      if (coAuthorsOnly && rec.coAuthorCount === 0) {
         return false;
       }
       if (!query) return true;
 
-      return (
-        record.documentId.toLowerCase().includes(query) ||
-        record.documentTitle.toLowerCase().includes(query) ||
-        record.authorName.toLowerCase().includes(query) ||
-        record.country.toLowerCase().includes(query) ||
-        record.city.toLowerCase().includes(query) ||
-        record.source.toLowerCase().includes(query) ||
-        record.reason.toLowerCase().includes(query) ||
-        (record.organization ?? '').toLowerCase().includes(query) ||
-        (record.matchedEntitySummary ?? '').toLowerCase().includes(query)
-      );
+      const searchable = [
+        rec.documentId,
+        rec.documentTitle,
+        rec.authorName,
+        rec.authorId,
+        rec.authorEmail ?? '',
+        rec.organization ?? '',
+        rec.country,
+        rec.city,
+        rec.reason,
+        rec.matchedWatchlist,
+        rec.source,
+        ...rec.coAuthors,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(query);
     });
   });
 
   protected onExportCsv(): void {
-    const recordsToExport = this.filteredRecords();
-    if (!recordsToExport.length) return;
-    const categorySuffix =
-      this.activeCategory() === 'ALL' ? 'all-red' : this.activeCategory().toLowerCase();
-    exportRecordsToCsv(recordsToExport, `sanctions-${categorySuffix}-records`);
-    this.exportMessage.set(`Exported ${recordsToExport.length} Red records to CSV.`);
+    const records = this.filteredRecords();
+    if (records.length === 0) return;
+    const ctx = this.context();
+    const baseName = ctx?.metricKey ?? 'red-records';
+    const timestamp = new Date().toISOString().slice(0, 10);
+    exportRecordsToCsv(records, `sanctions-${baseName}-${timestamp}.csv`);
   }
 }

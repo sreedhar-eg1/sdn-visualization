@@ -1,37 +1,35 @@
-<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-  <!-- Filters Control Bar -->
-  <section
-    aria-label="Dashboard Filters"
-    class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 sm:p-5 space-y-4"
-  >
+<!-- Dashboard Page Head -->
+<section class="mc-page-head">
+  <span class="mc-eyebrow">— Weekly Surveillance &bull; Executive Screening</span>
+  <h1 class="mc-display">Sanctions Intelligence Dashboard</h1>
+  <p class="mc-lead">
+    Continuous compliance surveillance tracking Prohibited Author List (PAL), Prohibited Country List (PCL), and Specially Designated Nationals (SDN) across editorial pipelines.
+  </p>
+</section>
+
+<div class="space-y-6">
+  <!-- Filters Control Card -->
+  <section aria-label="Dashboard Filters" class="mc-card">
     <!-- Dataset Mode & Multi-File Upload Strip -->
-    <div
-      class="flex flex-col gap-3 pb-3.5 border-b border-slate-100"
-    >
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">
-            Source:
-          </span>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4" style="border-bottom: 1px solid var(--mc-line)">
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="mc-eyebrow">Dataset:</span>
+        <div class="mc-chips" role="group" aria-label="Dataset Mode">
           <button
             type="button"
             (click)="setDatasetMode('UPLOADED_ONLY')"
-            [class]="
-              dataService.datasetMode() === 'UPLOADED_ONLY'
-                ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0c2752] text-white shadow-xs cursor-pointer'
-                : 'px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 cursor-pointer'
-            "
+            class="mc-chip"
+            [class.is-on]="dataService.datasetMode() === 'UPLOADED_ONLY'"
+            [attr.aria-pressed]="dataService.datasetMode() === 'UPLOADED_ONLY'"
           >
             Uploaded Files Only ({{ dataService.uploadedExcelRecords().length }})
           </button>
           <button
             type="button"
             (click)="setDatasetMode('COMBINED')"
-            [class]="
-              dataService.datasetMode() === 'COMBINED'
-                ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow-xs cursor-pointer'
-                : 'px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer'
-            "
+            class="mc-chip"
+            [class.is-on]="dataService.datasetMode() === 'COMBINED'"
+            [attr.aria-pressed]="dataService.datasetMode() === 'COMBINED'"
           >
             Combined (+ Mock JSON: {{
               dataService.mockRecords().length + dataService.uploadedExcelRecords().length
@@ -40,107 +38,76 @@
           <button
             type="button"
             (click)="setDatasetMode('MOCK_ONLY')"
-            [class]="
-              dataService.datasetMode() === 'MOCK_ONLY'
-                ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white shadow-xs cursor-pointer'
-                : 'px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer'
-            "
+            class="mc-chip"
+            [class.is-on]="dataService.datasetMode() === 'MOCK_ONLY'"
+            [attr.aria-pressed]="dataService.datasetMode() === 'MOCK_ONLY'"
           >
             Mock JSON (On Hold: {{ dataService.mockRecords().length }})
           </button>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2.5">
-          <label
-            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-xs cursor-pointer transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-3.5 w-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" x2="12" y1="3" y2="15" />
-            </svg>
-            <span>
-              {{
-                dataService.uploadedFiles().length > 0
-                  ? '+ Upload / Merge Excel & CSV'
-                  : 'Upload Excel / CSV Files'
-              }}
-            </span>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv,.txt"
-              multiple
-              (change)="onCsvFileUpload($event)"
-              class="sr-only"
-            />
-          </label>
-        </div>
       </div>
 
-      <!-- Uploaded Files Chips + Merge Status -->
-      @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
-        <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200/80">
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mr-1">
-              Merged Files ({{ dataService.uploadedFiles().length }}):
-            </span>
-            @for (file of dataService.uploadedFiles(); track file.id) {
-              <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-white border border-sky-200 text-slate-800 shadow-2xs"
-              >
-                <span class="font-semibold text-[#0c2752]">{{ file.fileName }}</span>
-                <span class="text-[11px] text-slate-500">({{ file.recordCount }})</span>
-                <button
-                  type="button"
-                  (click)="removeUploadedFile(file.id)"
-                  class="text-slate-400 hover:text-rose-600 font-bold leading-none cursor-pointer"
-                  [attr.aria-label]="'Remove ' + file.fileName"
-                >
-                  &times;
-                </button>
-              </span>
-            }
-            @if (dataService.uploadedFiles().length > 1) {
-              <button
-                type="button"
-                (click)="clearUploadedFiles()"
-                class="ml-1 text-xs font-medium text-rose-600 hover:underline cursor-pointer"
-              >
-                Clear All
-              </button>
-            }
-          </div>
-
-          @if (uploadStatusMessage(); as msg) {
-            <span class="text-xs font-medium text-emerald-700">{{ msg }}</span>
-          }
-        </div>
-      }
+      <div>
+        <label class="mc-btn mc-btn-sm cursor-pointer">
+          <span>+ Upload Excel / CSV</span>
+          <span class="arr">&rarr;</span>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv,.txt"
+            multiple
+            (change)="onCsvFileUpload($event)"
+            class="sr-only"
+          />
+        </label>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+    <!-- Uploaded Files Chips + Merge Status -->
+    @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
+      <div class="mc-tile mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="mc-eyebrow">Merged Files ({{ dataService.uploadedFiles().length }}):</span>
+          @for (file of dataService.uploadedFiles(); track file.id) {
+            <span class="mc-tag neutral flex items-center gap-1.5">
+              <span class="font-semibold">{{ file.fileName }}</span>
+              <span class="opacity-60">({{ file.recordCount }})</span>
+              <button
+                type="button"
+                (click)="removeUploadedFile(file.id)"
+                class="hover:opacity-100 cursor-pointer text-xs"
+                [attr.aria-label]="'Remove ' + file.fileName"
+              >
+                &times;
+              </button>
+            </span>
+          }
+          @if (dataService.uploadedFiles().length > 1) {
+            <button
+              type="button"
+              (click)="clearUploadedFiles()"
+              class="mc-link mc-small ml-2 cursor-pointer"
+            >
+              Clear All
+            </button>
+          }
+        </div>
+
+        @if (uploadStatusMessage(); as msg) {
+          <span class="mc-tag ok">{{ msg }}</span>
+        }
+      </div>
+    }
+
+    <!-- Filter Inputs Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end mt-4">
       <!-- Source Dropdown -->
-      <div class="lg:col-span-2">
-        <label
-          for="sourceFilter"
-          class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5"
-        >
-          Source
-        </label>
+      <div class="lg:col-span-3">
+        <span class="mc-label" style="margin-top: 0">Source</span>
         <select
           id="sourceFilter"
           [ngModel]="selectedSource()"
           (ngModelChange)="selectedSource.set($event)"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          class="mc-select"
         >
           @for (opt of sourceOptions; track opt.value) {
             <option [value]="opt.value">{{ opt.label }}</option>
@@ -149,18 +116,13 @@
       </div>
 
       <!-- Date Range Preset -->
-      <div class="lg:col-span-2">
-        <label
-          for="datePreset"
-          class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5"
-        >
-          Date Range
-        </label>
+      <div class="lg:col-span-3">
+        <span class="mc-label" style="margin-top: 0">Date Range</span>
         <select
           id="datePreset"
           [ngModel]="selectedPreset()"
           (ngModelChange)="onPresetChange($event)"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          class="mc-select"
         >
           @for (preset of datePresets; track preset.value) {
             <option [value]="preset.value">{{ preset.label }}</option>
@@ -169,52 +131,37 @@
       </div>
 
       <!-- Start & End Date Inputs -->
-      <div class="lg:col-span-4 grid grid-cols-2 gap-2.5">
+      <div class="lg:col-span-3 grid grid-cols-2 gap-2">
         <div>
-          <label
-            for="startDate"
-            class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5"
-          >
-            From
-          </label>
+          <span class="mc-label" style="margin-top: 0">From</span>
           <input
             id="startDate"
             type="date"
             [ngModel]="startDate()"
             (ngModelChange)="onCustomStartDate($event)"
-            class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs sm:text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+            class="mc-input"
           />
         </div>
         <div>
-          <label
-            for="endDate"
-            class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5"
-          >
-            To
-          </label>
+          <span class="mc-label" style="margin-top: 0">To</span>
           <input
             id="endDate"
             type="date"
             [ngModel]="endDate()"
             (ngModelChange)="onCustomEndDate($event)"
-            class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs sm:text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+            class="mc-input"
           />
         </div>
       </div>
 
       <!-- Reports Dropdown -->
-      <div class="lg:col-span-3">
-        <label
-          for="reportsFilter"
-          class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5"
-        >
-          Reports
-        </label>
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Reports</span>
         <select
           id="reportsFilter"
           [ngModel]="selectedReport()"
           (ngModelChange)="onReportChange($event)"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          class="mc-select"
         >
           @for (rep of reportOptions; track rep.value) {
             <option [value]="rep.value">{{ rep.label }}</option>
@@ -227,34 +174,27 @@
         <button
           type="button"
           (click)="resetFilters()"
-          class="w-full lg:w-auto px-3.5 py-2 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs sm:text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+          class="mc-btn mc-btn-ghost mc-btn-sm w-full lg:w-auto"
         >
           Reset
         </button>
       </div>
     </div>
 
-    <!-- Contextual Report Strip when a specialized report is selected -->
+    <!-- Contextual Report Strip -->
     @if (selectedReport() !== 'EXECUTIVE_OVERVIEW') {
-      <div
-        class="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-sky-50/60 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 px-4 sm:px-5 py-3 rounded-b-xl"
-      >
+      <div class="mc-tile mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
-          <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#0c2752] text-white"
-          >
-            Report Focus
-          </span>
+          <span class="mc-tag info">Report Focus</span>
           @if (selectedReport() === 'COUNTRY_SPECIFIC') {
             <div class="flex items-center gap-2">
-              <label for="countryFocus" class="text-xs font-medium text-slate-700">
-                Country Filter:
-              </label>
+              <span class="mc-label" style="margin: 0">Country Filter:</span>
               <select
                 id="countryFocus"
                 [ngModel]="selectedReportCountry()"
                 (ngModelChange)="selectedReportCountry.set($event)"
-                class="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 focus:border-sky-500 focus:outline-none"
+                class="mc-select py-1 text-xs"
+                style="width: auto"
               >
                 <option value="ALL">All Jurisdictions</option>
                 @for (country of availableCountries(); track country) {
@@ -263,9 +203,9 @@
               </select>
             </div>
           } @else {
-            <span class="text-xs sm:text-sm text-slate-700">
+            <span class="mc-body text-sm">
               Prepared view for
-              <strong class="text-slate-900">
+              <strong class="font-semibold">
                 {{
                   selectedReport() === 'PAL_AUTHOR_REPORT'
                     ? 'PAL / Author Escalation Report'
@@ -282,438 +222,378 @@
         <button
           type="button"
           (click)="exportReportBriefCsv()"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c2752] hover:bg-[#11356c] text-white text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
+          class="mc-btn mc-btn-sm"
         >
           <span>Download Report CSV</span>
+          <span class="arr">&rarr;</span>
         </button>
       </div>
     }
   </section>
 
   @if (dataService.records().length === 0) {
-    <!-- Empty / Upload-First State (Mock JSON on hold until files are uploaded) -->
+    <!-- Empty / Upload-First State -->
     <section
       aria-label="Upload Screening Data"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave($event)"
       (drop)="onDropFiles($event)"
-      [class]="
-        isDraggingFiles()
-          ? 'bg-sky-50 border-2 border-dashed border-sky-500 rounded-2xl p-10 text-center transition-colors shadow-xs'
-          : 'bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center transition-colors shadow-xs'
-      "
+      class="mc-card text-center py-12"
+      [class.border-2]="isDraggingFiles()"
+      [class.border-dashed]="isDraggingFiles()"
     >
-      <div
-        class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-[#0c2752] border border-sky-200 mb-4"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-7 w-7"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" x2="12" y1="3" y2="15" />
-        </svg>
-      </div>
-      <h2 class="text-lg sm:text-xl font-bold text-slate-900">
-        Upload Screening Export Files to Populate the Dashboard
-      </h2>
-      <p class="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto mt-2">
-        Mock JSON data is currently on hold. Drag &amp; drop or select one or more Excel (<code class="font-mono">.xlsx</code> / <code class="font-mono">.xls</code>) or CSV screening exports below.
-        Uploading additional files one after another will automatically <strong>merge</strong> and deduplicate records across files.
-      </p>
+      <div class="mc-empty mx-auto items-center">
+        <div class="ico">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" x2="12" y1="3" y2="15" />
+          </svg>
+        </div>
+        <span class="mc-eyebrow">— Upload-First Mode &bull; Mock JSON on Hold</span>
+        <h2 class="mc-h2">Upload Screening Export Files to Populate the Dashboard</h2>
+        <p class="mc-lead max-w-lg mx-auto">
+          Drag &amp; drop or select Excel (<span class="mc-code">.xlsx</span> / <span class="mc-code">.xls</span>) or CSV exports.
+          Uploading multiple files sequentially automatically merges and deduplicates records across batches.
+        </p>
 
-      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <label
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0c2752] hover:bg-[#11356c] text-white text-sm font-semibold shadow-sm cursor-pointer transition-colors"
-        >
-          <span>Select Excel / CSV Files (Multiple Supported)</span>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv,.txt"
-            multiple
-            (change)="onCsvFileUpload($event)"
-            class="sr-only"
-          />
-        </label>
+        <div class="flex flex-wrap items-center justify-center gap-3 mt-4">
+          <label class="mc-btn cursor-pointer">
+            <span>Select Excel / CSV Files</span>
+            <span class="arr">&rarr;</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,.txt"
+              multiple
+              (change)="onCsvFileUpload($event)"
+              class="sr-only"
+            />
+          </label>
 
-        <button
-          type="button"
-          (click)="loadSampleExcel()"
-          class="px-4 py-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-900 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
-        >
-          Load Built-in 23-Row Sample
-        </button>
+          <button
+            type="button"
+            (click)="loadSampleExcel()"
+            class="mc-btn mc-btn-ghost"
+          >
+            Load Built-in 23-Row Sample
+          </button>
 
-        <button
-          type="button"
-          (click)="setDatasetMode('MOCK_ONLY')"
-          class="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
-        >
-          Preview Mock JSON ({{ dataService.mockRecords().length }})
-        </button>
+          <button
+            type="button"
+            (click)="setDatasetMode('MOCK_ONLY')"
+            class="mc-btn mc-btn-ghost"
+          >
+            Preview Mock JSON ({{ dataService.mockRecords().length }})
+          </button>
+        </div>
       </div>
     </section>
   } @else {
-  <!-- KPI Summary Cards (Top Row) -->
-  <section aria-label="Executive KPI Summary">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
-        Executive Screening Metrics
-      </h2>
-      <span class="text-xs text-slate-500">
-        Click any KPI card to inspect <strong class="text-rose-600">Red</strong>-tagged records
-      </span>
-    </div>
+    <!-- Executive KPI Summary Cards -->
+    <section aria-label="Executive KPI Summary" class="space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="mc-eyebrow">— Executive Screening Metrics</span>
+        <span class="mc-small">
+          Click any stat card to inspect <span class="mc-tag bad">Red</span> records
+        </span>
+      </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
-      <!-- 1. Flag Events -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'Flag Events — Red Escalations',
-            'All screening flag events tagged as Red across selected sources & dates.',
-            'ALL',
-            'flagEvents'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Flag Events
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-slate-900 group-hover:text-[#0c2752]">
-            {{ kpiMetrics().flagEvents }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            {{ kpiMetrics().flagEventsRed }} Red
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-sky-700 font-medium opacity-80 group-hover:opacity-100">
-          Inspect Red records &rarr;
-        </div>
-      </button>
-
-      <!-- 2. Unique Documents -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'Unique Documents — Red Status',
-            'Distinct documents flagged with at least one Red compliance hit.',
-            'ALL',
-            'uniqueDocuments'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Unique Documents
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-slate-900 group-hover:text-[#0c2752]">
-            {{ kpiMetrics().uniqueDocuments }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            {{ kpiMetrics().greenDocuments }} Green
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
-          <span><strong class="text-rose-600">{{ kpiMetrics().redDocuments }}</strong> Red docs</span>
-          <span class="text-sky-700 font-medium">View &rarr;</span>
-        </div>
-      </button>
-
-      <!-- 3. Flagged Author Iden -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'Flagged Author Identities',
-            'Red-status records associated with flagged primary author identities across PAL, PCL, and SDN.',
-            'ALL',
-            'flaggedAuthorIden'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Flagged Author Iden
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-slate-900 group-hover:text-[#0c2752]">
-            {{ kpiMetrics().flaggedAuthorIden }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            {{ kpiMetrics().flaggedAuthorsRed }} Red
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-sky-700 font-medium opacity-80 group-hover:opacity-100">
-          Inspect Red authors &rarr;
-        </div>
-      </button>
-
-      <!-- 4. Co-author Records -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'Co-author Records — Red Network',
-            'Red-tagged documents containing linked co-author screening records.',
-            'ALL',
-            'coAuthorRecords'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Co-author Records
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-slate-900 group-hover:text-[#0c2752]">
-            {{ kpiMetrics().coAuthorRecords }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            {{ kpiMetrics().coAuthorsRed }} Red
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-sky-700 font-medium opacity-80 group-hover:opacity-100">
-          Inspect network &rarr;
-        </div>
-      </button>
-
-      <!-- 5. PAL Events -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'PAL Events — Prohibited Author List',
-            'Documents and authors flagged as Red under Prohibited Author List (PAL) screening.',
-            'PAL',
-            'palEvents'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          PAL Events
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-indigo-700 group-hover:text-indigo-800">
-            {{ kpiMetrics().palEvents }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            {{ kpiMetrics().palRed }} Red
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-sky-700 font-medium opacity-80 group-hover:opacity-100">
-          Inspect PAL Red &rarr;
-        </div>
-      </button>
-
-      <!-- 6. PCL Events -->
-      <button
-        type="button"
-        (click)="
-          openRedModal(
-            'PCL Events — Prohibited Country List',
-            'Documents and jurisdictions flagged as Red under Prohibited Country List (PCL) rules.',
-            'PCL',
-            'pclEvents'
-          )
-        "
-        class="group text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
-      >
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          PCL Events
-        </div>
-        <div class="mt-2 flex items-baseline justify-between gap-2">
-          <span class="text-2xl sm:text-3xl font-bold text-amber-700 group-hover:text-amber-800">
-            {{ kpiMetrics().pclEvents }}
-          </span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            {{ kpiMetrics().pclRed }} Red
-          </span>
-        </div>
-        <div class="mt-2 text-[11px] text-sky-700 font-medium opacity-80 group-hover:opacity-100">
-          Inspect PCL Red &rarr;
-        </div>
-      </button>
-    </div>
-
-    <!-- Red vs Green Document Disposition Strip (PAL, PCL, SDN) -->
-    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3.5">
-      @for (item of watchlistDispositions(); track item.category) {
+      <div class="mc-grid-6">
+        <!-- 1. Flag Events -->
         <button
           type="button"
           (click)="
             openRedModal(
-              item.label + ' Disposition — Red Flagged Documents',
-              'Showing Red-tagged documents matched against ' + item.fullName + ' (' + item.label + ').',
-              item.category,
-              'disposition-' + item.category
+              'Flag Events — Red Escalations',
+              'All screening flag events tagged as Red across selected sources & dates.',
+              'ALL',
+              'flagEvents'
             )
           "
-          class="text-left bg-white rounded-xl p-4 border border-slate-200 shadow-xs hover:border-rose-300 hover:shadow-md transition-all cursor-pointer"
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-800">
-                {{ item.label }} Documents
-              </span>
-              <p class="text-[11px] text-slate-500">{{ item.fullName }}</p>
-            </div>
-            <span class="text-xs font-semibold text-slate-500">
-              {{ item.totalDocs }} Unique Docs
-            </span>
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().flagEvents }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().flagEventsRed }} Red</span>
           </div>
-
-          <div class="mt-3 grid grid-cols-2 gap-2.5">
-            <div class="rounded-lg bg-rose-50 border border-rose-200/80 px-3 py-2 flex items-center justify-between">
-              <span class="text-xs font-semibold text-rose-800 flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-rose-600"></span>
-                Red
-              </span>
-              <span class="text-lg font-bold text-rose-700">{{ item.redDocs }}</span>
-            </div>
-
-            <div class="rounded-lg bg-emerald-50 border border-emerald-200/80 px-3 py-2 flex items-center justify-between">
-              <span class="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-emerald-600"></span>
-                Green
-              </span>
-              <span class="text-lg font-bold text-emerald-700">{{ item.greenDocs }}</span>
-            </div>
+          <div class="k">Flag Events</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>Inspect Red records</span>
+            <span class="arr">&rarr;</span>
           </div>
         </button>
-      }
-    </div>
-    <p class="mt-2 text-[11px] text-slate-500">
-      Documents matching multiple watchlists (e.g., <code class="font-mono">SDN|PAL</code>) are counted under each matched list.
-    </p>
-  </section>
 
-  <!-- Highcharts Visualizations Grid -->
-  <section aria-label="Sanctions Analytics Charts" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-    <!-- Chart 1: PCL Breakdown -->
-    <article class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 relative">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <h3 class="text-sm sm:text-base font-bold text-slate-900">
-            PCL Breakdown by Country
-          </h3>
-          <p class="text-xs text-slate-500">
-            Prohibited Country List events split by Red (Flagged) vs Green (Cleared)
-          </p>
-        </div>
-        <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold">
-          Column
-        </span>
-      </div>
-      <div class="w-full min-h-[300px] relative">
-        <highcharts-chart
-          [options]="pclChartOptions()"
-          [oneToOne]="true"
-          class="block w-full h-[300px]"
-        />
-        @if (pclEventCount() === 0) {
-          <div
-            class="absolute inset-0 flex items-center justify-center bg-white/85 rounded-lg p-6 text-center"
-          >
-            <div class="max-w-sm">
-              <p class="text-xs sm:text-sm font-semibold text-slate-700">
-                No PCL-tagged records in this dataset slice
-              </p>
-              <p class="text-xs text-slate-500 mt-1">
-                The uploaded Excel sample contains PAL and SDN matches. Switch to
-                <strong class="text-slate-700">Combined: Mock + Excel</strong> to view PCL country breakdowns alongside the Excel rows.
-              </p>
-            </div>
+        <!-- 2. Unique Documents -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'Unique Documents — Red Status',
+              'Distinct documents flagged with at least one Red compliance hit.',
+              'ALL',
+              'uniqueDocuments'
+            )
+          "
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().uniqueDocuments }}</div>
+            <span class="mc-tag ok">{{ kpiMetrics().greenDocuments }} Green</span>
           </div>
-        }
-      </div>
-    </article>
+          <div class="k">Unique Documents</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>{{ kpiMetrics().redDocuments }} Red docs</span>
+            <span class="arr">&rarr;</span>
+          </div>
+        </button>
 
-    <!-- Chart 2: Flag Events by Source -->
-    <article class="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <h3 class="text-sm sm:text-base font-bold text-slate-900">
-            Flag Events by Source
-          </h3>
-          <p class="text-xs text-slate-500">
-            Screening volume &amp; Red escalations across PAPERCEPT, S1M, IDAMS, and feeds
-          </p>
-        </div>
-        <span class="px-2 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[11px] font-semibold">
-          Bar / Column
-        </span>
-      </div>
-      <div class="w-full min-h-[300px]">
-        <highcharts-chart
-          [options]="sourceChartOptions()"
-          [oneToOne]="true"
-          class="block w-full h-[300px]"
-        />
-      </div>
-    </article>
+        <!-- 3. Flagged Author Iden -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'Flagged Author Identities',
+              'Red-status records associated with flagged primary author identities across PAL, PCL, and SDN.',
+              'ALL',
+              'flaggedAuthorIden'
+            )
+          "
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().flaggedAuthorIden }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().flaggedAuthorsRed }} Red</span>
+          </div>
+          <div class="k">Flagged Author Iden</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>Inspect Red authors</span>
+            <span class="arr">&rarr;</span>
+          </div>
+        </button>
 
-    <!-- Chart 3: Reason Mix -->
-    <article class="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <h3 class="text-sm sm:text-base font-bold text-slate-900">
-            Reason Mix Distribution
-          </h3>
-          <p class="text-xs text-slate-500">
-            Proportional share of PAL, PCL, and SDN watchlist triggers
-          </p>
-        </div>
-        <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200 text-[11px] font-semibold">
-          Pie
-        </span>
-      </div>
-      <div class="w-full min-h-[300px]">
-        <highcharts-chart
-          [options]="reasonMixChartOptions()"
-          [oneToOne]="true"
-          class="block w-full h-[300px]"
-        />
-      </div>
-    </article>
+        <!-- 4. Co-author Records -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'Co-author Records — Red Network',
+              'Red-tagged documents containing linked co-author screening records.',
+              'ALL',
+              'coAuthorRecords'
+            )
+          "
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().coAuthorRecords }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().coAuthorsRed }} Red</span>
+          </div>
+          <div class="k">Co-author Records</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>Inspect network</span>
+            <span class="arr">&rarr;</span>
+          </div>
+        </button>
 
-    <!-- Chart 4: Daily Decision Events -->
-    <article class="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <h3 class="text-sm sm:text-base font-bold text-slate-900">
-            Daily Decision Events Trend
-          </h3>
-          <p class="text-xs text-slate-500">
-            Daily screening trajectory across Total, Red Flagged, and Green Cleared decisions
-          </p>
-        </div>
-        <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
-          Spline
-        </span>
+        <!-- 5. PAL Events -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'PAL Events — Prohibited Author List',
+              'Documents and authors flagged as Red under Prohibited Author List (PAL) screening.',
+              'PAL',
+              'palEvents'
+            )
+          "
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().palEvents }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().palRed }} Red</span>
+          </div>
+          <div class="k">PAL Events</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>Inspect PAL Red</span>
+            <span class="arr">&rarr;</span>
+          </div>
+        </button>
+
+        <!-- 6. PCL Events -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'PCL Events — Prohibited Country List',
+              'Documents and jurisdictions flagged as Red under Prohibited Country List (PCL) rules.',
+              'PCL',
+              'pclEvents'
+            )
+          "
+          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="n">{{ kpiMetrics().pclEvents }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().pclRed }} Red</span>
+          </div>
+          <div class="k">PCL Events</div>
+          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
+            <span>Inspect PCL Red</span>
+            <span class="arr">&rarr;</span>
+          </div>
+        </button>
       </div>
-      <div class="w-full min-h-[300px]">
+    </section>
+
+    <!-- Split Layout 1: Watchlist Dispositions (White card, Left) & Reason Mix (Dark Cocoa card, Right) -->
+    <section aria-label="Watchlist Dispositions and Reason Mix" class="mc-split">
+      <!-- Left: Watchlist Dispositions in white .mc-card -->
+      <div class="mc-card space-y-4">
+        <div class="mc-card-head">
+          <div>
+            <span class="mc-eyebrow">— Dispositions</span>
+            <h3 class="mc-h3">Watchlist Dispositions</h3>
+            <p class="mc-small">Red-flagged escalations vs cleared documents across lists</p>
+          </div>
+          <span class="mc-tag info">PAL &bull; PCL &bull; SDN</span>
+        </div>
+
+        <div class="space-y-3">
+          @for (item of watchlistDispositions(); track item.category) {
+            <button
+              type="button"
+              (click)="
+                openRedModal(
+                  item.label + ' Disposition — Red Flagged Documents',
+                  'Showing Red-tagged documents matched against ' + item.fullName + ' (' + item.label + ').',
+                  item.category,
+                  'disposition-' + item.category
+                )
+              "
+              class="mc-tile w-full text-left cursor-pointer hover:opacity-95 transition-all block"
+            >
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <div class="t font-semibold">{{ item.label }} Documents</div>
+                  <div class="mc-small">{{ item.fullName }}</div>
+                </div>
+                <div class="mc-code font-bold">{{ item.totalDocs }} Unique Docs</div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mt-2">
+                <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
+                  <span class="mc-tag bad">Red</span>
+                  <span class="mc-num font-bold text-lg" style="color: var(--mc-bad)">{{ item.redDocs }}</span>
+                </div>
+                <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
+                  <span class="mc-tag ok">Green</span>
+                  <span class="mc-num font-bold text-lg" style="color: var(--mc-ok)">{{ item.greenDocs }}</span>
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+
+        <p class="mc-small mt-2">
+          Documents matching multiple watchlists (e.g., <span class="mc-code">SDN|PAL</span>) are counted under each matched list.
+        </p>
+      </div>
+
+      <!-- Right: Reason Mix Pie Chart in dark cocoa .mc-card-dark -->
+      <div class="mc-card-dark">
+        <div class="mc-card-head">
+          <div>
+            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Categorical Mix</span>
+            <h3 class="mc-h3" style="color: #FFFFFF">Watchlist Reason Mix</h3>
+          </div>
+          <span class="mc-tag">Pie Chart</span>
+        </div>
+
+        <div class="w-full min-h-[320px]">
+          <highcharts-chart
+            [options]="reasonMixChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[320px]"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Split Layout 2: Detailed Results & Charts Grid (.mc-grid-2) -->
+    <section aria-label="Country and Source Analysis" class="mc-grid-2">
+      <!-- Chart 1: PCL Breakdown (White .mc-card) -->
+      <div class="mc-card relative">
+        <div class="mc-card-head">
+          <div>
+            <span class="mc-eyebrow">— Jurisdictions</span>
+            <h3 class="mc-h3">PCL Breakdown by Country</h3>
+          </div>
+          <span class="mc-tag neutral">Column</span>
+        </div>
+
+        <div class="w-full min-h-[320px] relative">
+          <highcharts-chart
+            [options]="pclChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[320px]"
+          />
+          @if (pclEventCount() === 0) {
+            <div
+              class="absolute inset-0 flex items-center justify-center bg-white/90 rounded-2xl p-6 text-center"
+            >
+              <div class="max-w-sm">
+                <p class="mc-body font-semibold">
+                  No PCL-tagged records in this dataset slice
+                </p>
+                <p class="mc-small mt-1">
+                  The uploaded Excel sample contains PAL and SDN matches. Switch to
+                  <strong>Combined: Mock + Excel</strong> to view PCL country breakdowns alongside the Excel rows.
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Chart 2: Flag Events by Source (Dark Cocoa .mc-card-dark) -->
+      <div class="mc-card-dark">
+        <div class="mc-card-head">
+          <div>
+            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Ingest Pipelines</span>
+            <h3 class="mc-h3" style="color: #FFFFFF">Flag Events by Source</h3>
+          </div>
+          <span class="mc-tag">Bar / Column</span>
+        </div>
+
+        <div class="w-full min-h-[320px]">
+          <highcharts-chart
+            [options]="sourceChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[320px]"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Full-Width Chart: Daily Decision Events Trend in .mc-card -->
+    <section aria-label="Daily Decision Events Trend" class="mc-card">
+      <div class="mc-card-head">
+        <div>
+          <span class="mc-eyebrow">— Temporal Analysis</span>
+          <h3 class="mc-h3">Daily Decision Events Trend</h3>
+          <p class="mc-small">Daily screening trajectory across Total, Red Flagged, and Green Cleared decisions</p>
+        </div>
+        <span class="mc-tag neutral">Spline</span>
+      </div>
+
+      <div class="w-full min-h-[320px]">
         <highcharts-chart
           [options]="dailyTrendChartOptions()"
           [oneToOne]="true"
-          class="block w-full h-[300px]"
+          class="block w-full h-[320px]"
         />
       </div>
-    </article>
-  </section>
+    </section>
   }
 </div>
 

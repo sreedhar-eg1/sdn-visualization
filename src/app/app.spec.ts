@@ -17,13 +17,12 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the executive dashboard banner title', async () => {
+  it('should render the MC Theme topbar wordmark and brand', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain(
-      'SANCTIONS INTELLIGENCE | WEEKLY EXECUTIVE DASHBOARD'
-    );
+    expect(compiled.querySelector('.mc-wordmark')?.textContent).toContain('MolecularConnections');
+    expect(compiled.querySelector('.mc-eyebrow')?.textContent).toContain('Sanctions Intelligence');
   });
 });
