@@ -118,6 +118,20 @@ function normalizeDecisionDate(raw: string): string {
     const year = y.length === 2 ? `20${y}` : y;
     return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
+  const monthMap: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+  const namedMatch =
+    cleaned.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})\b.*?\b(\d{4})\b/i) ||
+    cleaned.match(/\b(\d{1,2})[-/\s]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/\s]+(\d{4})\b/i);
+  if (namedMatch) {
+    const isFirstAlpha = isNaN(Number(namedMatch[1]));
+    const monStr = (isFirstAlpha ? namedMatch[1] : namedMatch[2]).slice(0, 3).toLowerCase();
+    const dayStr = (isFirstAlpha ? namedMatch[2] : namedMatch[1]).padStart(2, '0');
+    const yearStr = namedMatch[3];
+    return `${yearStr}-${monthMap[monStr] ?? '01'}-${dayStr}`;
+  }
   if (cleaned) {
     const parsed = new Date(cleaned);
     if (!Number.isNaN(parsed.getTime())) {
@@ -125,6 +139,25 @@ function normalizeDecisionDate(raw: string): string {
     }
   }
   return new Date().toISOString().slice(0, 10);
+}
+
+function parseBracketedAffiliation(raw: string): RawAffiliation {
+  const cleaned = cleanText(raw).replace(/^\[|\]$/g, '').trim();
+  if (!cleaned) return {};
+  const aff: RawAffiliation = {};
+  const tokens = cleaned.split(/,\s*(?=[A-Za-z\s]+:)/);
+  for (const token of tokens) {
+    const colonIdx = token.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = token.slice(0, colonIdx).trim().toLowerCase().replace(/[\s_-]+/g, '');
+    const val = token.slice(colonIdx + 1).trim();
+    if (key === 'city') aff.city = val;
+    else if (key === 'country') aff.country = val;
+    else if (key === 'organisationname' || key === 'organizationname' || key === 'institution') aff.organisationName = val;
+    else if (key === 'organisationdivision' || key === 'department') aff.organisationDivision = val;
+    else if (key === 'organisationdepartment') aff.organisationDepartment = val;
+  }
+  return aff;
 }
 
 interface RawAffiliation {
@@ -170,10 +203,19 @@ export function recomputeCoAuthorsByDocument(records: SanctionsRecord[]): Sancti
 
 const EXPECTED_SCREENING_HEADERS = [
   'documentid',
+  'docid',
   'authorfullname',
+  'authorname',
   'matchedterm',
+  'reason',
   'status',
   'documentsource',
+  'manuscriptid',
+  'journalname',
+  'palscore',
+  'pclscore',
+  'sdnscore',
+  'palid',
 ];
 
 /**
@@ -188,156 +230,228 @@ export function parseSanctionsTableRows(
   const rows = rawRows.filter((row) => row.some((cell) => cleanText(cell).length > 0));
   if (rows.length < 2) return [];
 
-  const headers = rows[0].map((h) => cleanText(h).toLowerCase());
+  const normHeaders = rows[0].map((h) => cleanText(h).toLowerCase().replace(/[\s_-]+/g, ''));
   const matchedHeaderCount = EXPECTED_SCREENING_HEADERS.filter((h) =>
-    headers.includes(h)
+    normHeaders.includes(h)
   ).length;
   if (matchedHeaderCount < 2) {
     return [];
   }
 
-  const indexOf = (col: string): number => headers.indexOf(col.toLowerCase());
-
-  const getCell = (row: string[], col: string): string => {
-    const idx = indexOf(col);
-    return idx >= 0 && idx < row.length ? cleanText(row[idx]) : '';
+  const findCol = (...candidates: string[]): number => {
+    return normHeaders.findIndex((h) => candidates.includes(h));
   };
 
-  // First pass: group author names per documentId so we can compute co-authors accurately
-  const docAuthorsMap = new Map<string, string[]>();
-  for (const row of rows.slice(1)) {
-    const docId = getCell(row, 'documentid') || `DOC-${getCell(row, 'id')}`;
-    const fullName =
-      getCell(row, 'authorfullname') ||
-      `${getCell(row, 'authorfirstname')} ${getCell(row, 'authorlastname')}`.trim();
-    if (!fullName) continue;
-    const list = docAuthorsMap.get(docId) ?? [];
-    if (!list.includes(fullName)) {
-      list.push(fullName);
-    }
-    docAuthorsMap.set(docId, list);
-  }
+  const docIdIdx = findCol('documentid', 'docid');
+  const idIdx = findCol('id');
+  const manuscriptIdIdx = findCol('manuscriptid');
+  const authorNameIdx = findCol('authorfullname', 'authorname');
+  const authorFirstIdx = findCol('authorfirstname', 'firstname');
+  const authorLastIdx = findCol('authorlastname', 'lastname');
+  const emailIdx = findCol('authoremailaddress', 'email', 'authoremail');
+  const statusIdx = findCol('status');
+  const sourceIdx = findCol('documentsource', 'source');
+  const journalIdx = findCol('journalname', 'journal');
+  const docTitleIdx = findCol('documenttitle', 'title');
+  const docTypeIdx = findCol('documenttype', 'type');
+  const reasonIdx = findCol('matchedterm', 'reason');
+  const countryIdx = findCol('country');
+  const affilIdx = findCol('affiliations', 'affiliation');
+  const palIdIdx = findCol('palid');
+  const authorIdIdx = findCol('authorid', 'authorrecordid');
+  const dateIdx = findCol('decisiondate', 'startdate', 'enddate');
+  const palScoreIdx = findCol('palscore');
+  const sdnScoreIdx = findCol('sdnscore');
+  const pclScoreIdx = findCol('pclscore');
+  const commentsIdx = findCol('comments', 'curationcomments');
+
+  let currentDocId = '';
+  let currentDocTitle = '';
+  let currentManuscriptId = '';
+  let currentJournalName = '';
+  let currentDocType = 'Article';
+  let currentSource: ScreeningSource = 'IDAMS';
+  let currentDecisionDate = '';
+  let currentStatus: ComplianceStatus = 'Red';
+  let isCoAuthorsSection = false;
 
   const parsedRecords: SanctionsRecord[] = [];
 
-  rows.slice(1).forEach((row, idx) => {
-    const rowId = getCell(row, 'id') || String(idx + 1);
-    const authorName =
-      getCell(row, 'authorfullname') ||
-      `${getCell(row, 'authorfirstname')} ${getCell(row, 'authorlastname')}`.trim() ||
-      'Unknown Author';
+  for (let rIdx = 1; rIdx < rows.length; rIdx++) {
+    const row = rows[rIdx];
+    const getVal = (idx: number): string => (idx >= 0 && idx < row.length ? cleanText(row[idx]) : '');
 
-    const documentId = getCell(row, 'documentid') || `DOC-XLS-${rowId}`;
-    const documentTitle = getCell(row, 'documenttitle') || 'Untitled Document';
-    const documentType = getCell(row, 'documenttype') || 'Article';
-    const source = normalizeSource(getCell(row, 'documentsource'));
-    const status = normalizeStatus(getCell(row, 'status'));
-    const matchedTerms = parseMatchedTerms(getCell(row, 'matchedterm'));
+    const rawAuthor =
+      getVal(authorNameIdx) ||
+      `${getVal(authorFirstIdx)} ${getVal(authorLastIdx)}`.trim();
+
+    if (/^co-?authors?$/i.test(rawAuthor)) {
+      isCoAuthorsSection = true;
+      continue;
+    }
+
+    const explicitDocId = getVal(docIdIdx);
+    const rowId = getVal(idIdx) || String(rIdx);
+
+    if (explicitDocId) {
+      currentDocId = explicitDocId;
+      currentManuscriptId = getVal(manuscriptIdIdx);
+      currentJournalName = getVal(journalIdx);
+      currentDocTitle = getVal(docTitleIdx) || currentJournalName || `Screened Document ${explicitDocId}`;
+      currentDocType = getVal(docTypeIdx) || 'Article';
+      if (getVal(sourceIdx)) {
+        currentSource = normalizeSource(getVal(sourceIdx));
+      }
+      if (getVal(statusIdx)) {
+        currentStatus = normalizeStatus(getVal(statusIdx));
+      }
+      if (getVal(dateIdx)) {
+        currentDecisionDate = normalizeDecisionDate(getVal(dateIdx));
+      }
+      isCoAuthorsSection = false;
+    } else {
+      if (!currentDocId) {
+        currentDocId = `DOC-XLS-${rowId}`;
+        currentDocTitle = `Screened Document ${currentDocId}`;
+      }
+    }
+
+    if (!rawAuthor && !getVal(emailIdx) && !getVal(reasonIdx)) {
+      continue;
+    }
+
+    const authorName = rawAuthor || 'Unknown Author';
+    const email = getVal(emailIdx).toLowerCase();
+    const orcid = getVal(findCol('authororcidid'));
+    const rawAuthorId = getVal(authorIdIdx);
+    const authorId = orcid
+      ? `ORCID-${orcid}`
+      : email
+        ? `EMAIL-${email}`
+        : `AUTH-${rawAuthorId || rowId}`;
+
+    const rawPalId = getVal(palIdIdx).replace(/^\[|\]$/g, '').trim();
+
+    const rawAffil = getVal(affilIdx);
+    let affilObj: RawAffiliation = {};
+    if (rawAffil) {
+      const parsedJson = safeJsonParse<RawAffiliation[]>(rawAffil, []);
+      if (Array.isArray(parsedJson) && parsedJson.length > 0 && typeof parsedJson[0] === 'object') {
+        affilObj = parsedJson[0];
+      } else if (rawAffil.trim().startsWith('[') && rawAffil.includes(':')) {
+        affilObj = parseBracketedAffiliation(rawAffil);
+      }
+    }
+
+    const rawCountry = getVal(countryIdx).replace(/^\[|\]$/g, '').trim();
+    const country = normalizeCountry(rawCountry || affilObj.country || '');
+    const city = cleanText(affilObj.city) || 'N/A';
+    const organization =
+      cleanText(affilObj.organisationName) ||
+      cleanText(affilObj.organisationDivision) ||
+      'Unspecified Affiliation';
+
+    const rawReason = getVal(reasonIdx);
+    const palHits = safeJsonParse<RawMatchHit[]>(getVal(palScoreIdx), []);
+    const sdnHits = safeJsonParse<RawMatchHit[]>(getVal(sdnScoreIdx), []);
+    const pclHits = safeJsonParse<RawMatchHit[]>(getVal(pclScoreIdx), []);
+
+    const matchedTerms: ScreeningCategory[] = [];
+    if (/pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
+    if (/pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
+    if (/sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
+    if (matchedTerms.length === 0) {
+      const parsed = parseMatchedTerms(rawReason);
+      if (parsed.length > 0) {
+        matchedTerms.push(...parsed);
+      } else if (!isCoAuthorsSection) {
+        matchedTerms.push('PAL');
+      }
+    }
+
     const primaryCategory: ScreeningCategory = matchedTerms.includes('PCL')
       ? 'PCL'
       : matchedTerms.includes('SDN')
         ? 'SDN'
         : 'PAL';
 
-    const affiliations = safeJsonParse<RawAffiliation[]>(getCell(row, 'affiliations'), []);
-    const primaryAffil = affiliations[0] ?? {};
-    const country = normalizeCountry(primaryAffil.country ?? '');
-    const city = cleanText(primaryAffil.city) || 'N/A';
-    const organization =
-      cleanText(primaryAffil.organisationName) ||
-      cleanText(primaryAffil.organisationDivision) ||
-      'Unspecified Affiliation';
+    const rowStatusRaw = getVal(statusIdx);
+    const rowStatus: ComplianceStatus = rowStatusRaw
+      ? normalizeStatus(rowStatusRaw)
+      : isCoAuthorsSection
+        ? 'Green'
+        : currentStatus;
 
-    const palHits = safeJsonParse<RawMatchHit[]>(getCell(row, 'palscore'), []);
-    const sdnHits = safeJsonParse<RawMatchHit[]>(getCell(row, 'sdnscore'), []);
-    const pclHits = safeJsonParse<RawMatchHit[]>(getCell(row, 'pclscore'), []);
+    let reasonText = rawReason;
+    if (isCoAuthorsSection && !rawReason) {
+      reasonText = `Co-Author on Document ${currentDocId}`;
+    } else if (!reasonText) {
+      const parts = matchedTerms.map((t) =>
+        t === 'PAL' ? 'PAL Match' : t === 'SDN' ? 'SDN Match' : 'PCL Country Rule'
+      );
+      reasonText = parts.join(' + ') || 'Screening Alert';
+    }
 
     const topPal = palHits[0];
     const topSdn = sdnHits[0];
     const topPcl = pclHits[0];
-
-    const rawScoreValues = [topPal?.score, topSdn?.score, topPcl?.score]
+    const rawScores = [topPal?.score, topSdn?.score, topPcl?.score]
       .map((s) => Number(s))
       .filter((n) => Number.isFinite(n) && n > 0);
-    const maxRawScore = rawScoreValues.length > 0 ? Math.max(...rawScoreValues) : 3.5;
-    // Scale Lucene/Elasticsearch match scores (~3.0 - 8.0) onto a 0-100 risk index
+    const maxScore = rawScores.length > 0 ? Math.max(...rawScores) : 3.5;
     const riskScore =
-      status === 'Red'
-        ? Math.min(99, Math.max(68, Math.round(52 + maxRawScore * 5.8)))
-        : Math.min(59, Math.max(20, Math.round(20 + maxRawScore * 4.5)));
+      rowStatus === 'Red'
+        ? Math.min(99, Math.max(68, Math.round(52 + maxScore * 5.8)))
+        : Math.min(59, Math.max(20, Math.round(20 + maxScore * 4.5)));
 
     const matchedParts: string[] = [];
     if (topPal?.formattedName || topPal?.name) {
-      matchedParts.push(
-        `PAL: ${topPal.formattedName ?? topPal.name} (${topPal.id ?? topPal.palId ?? 'PAL'})`
-      );
+      matchedParts.push(`PAL: ${topPal.formattedName ?? topPal.name}`);
     }
     if (topSdn?.formattedName || topSdn?.name) {
-      matchedParts.push(
-        `SDN: ${topSdn.formattedName ?? topSdn.name} (${topSdn.id ?? topSdn.sdnId ?? 'SDN'})`
-      );
+      matchedParts.push(`SDN: ${topSdn.formattedName ?? topSdn.name}`);
     }
     if (topPcl?.name) {
       matchedParts.push(`PCL: ${topPcl.name}`);
     }
 
-    const allDocAuthors = docAuthorsMap.get(documentId) ?? [];
-    const coAuthors = allDocAuthors.filter((name) => name !== authorName);
-
-    const decisionDate = normalizeDecisionDate(
-      getCell(row, 'startdate') || getCell(row, 'enddate')
-    );
-
-    const orcid = getCell(row, 'authororcidid');
-    const email = getCell(row, 'authoremailaddress').toLowerCase();
-    const authorId = orcid
-      ? `ORCID-${orcid}`
-      : email
-        ? `EMAIL-${email}`
-        : `AUTH-${getCell(row, 'authorid') || rowId}`;
-
-    const reasonParts = matchedTerms.map((term) => {
-      if (term === 'PAL') return `PAL Match (${palHits.length || 1} hit${palHits.length === 1 ? '' : 's'})`;
-      if (term === 'SDN') return `SDN Match (${sdnHits.length || 1} hit${sdnHits.length === 1 ? '' : 's'})`;
-      return `PCL Country Rule`;
-    });
-
-    const comments = getCell(row, 'comments');
-    const notes =
-      comments && comments !== '[]'
-        ? `${organization}. ${comments}`
-        : `${organization} (${documentType}).`;
+    const comments = getVal(commentsIdx);
+    const notes = comments && comments !== '[]' ? `${organization}. ${comments}` : `${organization} (${currentDocType}).`;
 
     parsedRecords.push({
-      id: `${batchId}-${rowId}-${idx + 1}`,
-      documentId,
-      documentTitle,
-      source,
+      id: `${batchId}-${rowId}-${rIdx}`,
+      documentId: currentDocId,
+      documentTitle: currentDocTitle,
+      manuscriptId: currentManuscriptId || undefined,
+      journalName: currentJournalName || undefined,
+      documentType: currentDocType,
+      source: currentSource,
+      decisionDate: currentDecisionDate || new Date().toISOString().slice(0, 10),
+      status: rowStatus,
       authorName,
+      authorEmail: email || undefined,
       authorId,
-      coAuthors,
-      coAuthorCount: coAuthors.length,
+      palId: rawPalId || undefined,
+      coAuthors: [],
+      coAuthorCount: 0,
       country,
       city,
-      category: primaryCategory,
+      organization,
+      affiliationsRaw: rawAffil || undefined,
       matchedTerms,
-      reason: reasonParts.join(' + '),
-      status,
+      category: primaryCategory,
+      reason: reasonText,
       riskScore,
-      decisionDate,
-      matchedWatchlist: matchedTerms.join(' | '),
       notes,
+      matchedEntitySummary: matchedParts.join(' • ') || undefined,
       dataOrigin: 'UPLOADED_EXCEL',
       batchId,
       sourceFileName: fileName,
-      authorEmail: getCell(row, 'authoremailaddress') || undefined,
-      organization,
-      documentType,
-      matchedEntitySummary: matchedParts.join(' • ') || undefined,
+      matchedWatchlist: matchedTerms.join(' | '),
     });
-  });
+  }
 
-  return parsedRecords;
+  return recomputeCoAuthorsByDocument(parsedRecords);
 }
 
 export function parseSanctionsCsvExport(

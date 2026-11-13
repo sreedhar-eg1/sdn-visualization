@@ -28,9 +28,12 @@ export interface SanctionsRecord {
   id: string;
   documentId: string;
   documentTitle: string;
+  journalName?: string;
+  manuscriptId?: string;
   source: ScreeningSource;
   authorName: string;
   authorId: string;
+  palId?: string;
   coAuthors: string[];
   coAuthorCount: number;
   country: string;
@@ -50,6 +53,7 @@ export interface SanctionsRecord {
   organization?: string;
   documentType?: string;
   matchedEntitySummary?: string;
+  affiliationsRaw?: string;
 }
 
 export interface UploadedFileBatch {

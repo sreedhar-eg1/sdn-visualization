@@ -1,4 +1,8 @@
 import { SanctionsRecord } from '../models/sanctions.models';
+import { exportRecordsToExcel, type ExcelExportOptions } from './excel-export.util';
+
+export { exportRecordsToExcel };
+export type { ExcelExportOptions };
 
 function escapeCsvField(value: string | number): string {
   const stringValue = String(value ?? '');
@@ -8,43 +12,46 @@ function escapeCsvField(value: string | number): string {
   return stringValue;
 }
 
-export function exportRecordsToCsv(records: SanctionsRecord[], filenamePrefix = 'sanctions-red-records'): void {
+export function exportRecordsToCsv(
+  records: SanctionsRecord[],
+  filenamePrefix = 'sanctions-red-records'
+): void {
   const headers = [
-    'Record ID',
-    'Document ID',
-    'Document Title',
-    'Source',
-    'Flagged Author',
-    'Author ID',
-    'Co-Author Count',
-    'Co-Authors',
-    'Country',
-    'City',
-    'Category',
-    'Reason',
+    'Document_Id',
+    'Manuscript_Id',
     'Status',
-    'Risk Score',
-    'Decision Date',
-    'Matched Watchlist',
+    'Decision_Date',
+    'Journal_Name',
+    'Document_Source',
+    'Reason',
+    'Author_Name',
+    'Email',
+    'Author_Id',
+    'Pal_Id',
+    'Country',
+    'Affiliations',
+    'Co_Authors',
+    'Risk_Score',
+    'Matched_Watchlist',
     'Notes',
   ];
 
   const rows = records.map((record) => [
-    record.id,
     record.documentId,
-    record.documentTitle,
-    record.source,
-    record.authorName,
-    record.authorId,
-    record.coAuthorCount,
-    record.coAuthors.join('; '),
-    record.country,
-    record.city,
-    record.category,
-    record.reason,
-    record.status,
-    record.riskScore,
+    record.manuscriptId || '',
+    record.status.toUpperCase(),
     record.decisionDate,
+    record.journalName || record.documentTitle,
+    record.source,
+    record.matchedTerms?.join('|') || record.category || 'PAL',
+    record.authorName,
+    record.authorEmail || '',
+    record.authorId.replace(/^(AUTH-|ORCID-|EMAIL-)/, ''),
+    record.palId || '',
+    record.country,
+    record.affiliationsRaw || (record.organization ? `[Organisation Name : ${record.organization}]` : ''),
+    record.coAuthors.join('; '),
+    `${record.riskScore}/100`,
     record.matchedWatchlist,
     record.notes,
   ]);
@@ -58,10 +65,10 @@ export function exportRecordsToCsv(records: SanctionsRecord[], filenamePrefix = 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const cleanPrefix = filenamePrefix.endsWith('.csv') ? filenamePrefix : `${filenamePrefix}.csv`;
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `${filenamePrefix}-${today}.csv`);
+  link.setAttribute('download', cleanPrefix);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

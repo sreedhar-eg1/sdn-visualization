@@ -47,7 +47,18 @@
         </div>
       </div>
 
-      <div>
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- <select
+          class="mc-select text-xs py-1"
+          (change)="onDirectExcelSelect($event)"
+          aria-label="Directly load uploaded Excel"
+        >
+          <option value="" disabled selected>Direct Load Excel &hellip;</option>
+          @for (file of builtInExcelFiles; track file.name) {
+            <option [value]="file.name">{{ file.label }} ({{ file.recordCount }} recs)</option>
+          }
+        </select> -->
+
         <label class="mc-btn mc-btn-sm cursor-pointer">
           <span>+ Upload Excel / CSV</span>
           <span class="arr">&rarr;</span>
@@ -193,14 +204,24 @@
           </span>
         </div>
 
-        <button
-          type="button"
-          (click)="exportReportBriefCsv()"
-          class="mc-btn mc-btn-sm"
-        >
-          <span>Export {{ rep }} CSV</span>
-          <span class="arr">&rarr;</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="exportReportBriefExcel()"
+            class="mc-btn mc-btn-sm"
+          >
+            <span>Export {{ rep }} (Excel)</span>
+            <span class="arr">&rarr;</span>
+          </button>
+          <button
+            type="button"
+            (click)="exportReportBriefCsv()"
+            class="mc-btn mc-btn-ghost mc-btn-sm"
+            title="Export as CSV"
+          >
+            <span>CSV</span>
+          </button>
+        </div>
       </div>
     }
   </section>
@@ -243,6 +264,17 @@
               class="sr-only"
             />
           </label>
+
+          @for (file of builtInExcelFiles; track file.name) {
+            <button
+              type="button"
+              (click)="loadDirectExcel(file.name)"
+              class="mc-btn mc-btn-ghost"
+              [title]="file.description"
+            >
+              Load {{ file.label }} ({{ file.recordCount }})
+            </button>
+          }
 
           <button
             type="button"

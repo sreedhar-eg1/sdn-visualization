@@ -15,6 +15,7 @@ import {
   ScreeningCategory,
 } from '../../models/sanctions.models';
 import { exportRecordsToCsv } from '../../utils/csv-export.util';
+import { exportRecordsToExcel } from '../../utils/excel-export.util';
 
 function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
   return (record.matchedTerms ?? [record.category]).includes(category);
@@ -123,15 +124,26 @@ function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory)
                 />
               </div>
 
-              <button
-                type="button"
-                (click)="onExportCsv()"
-                [disabled]="filteredRecords().length === 0"
-                class="mc-btn mc-btn-sm"
-              >
-                <span>Export to CSV</span>
-                <span class="arr">&rarr;</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="onExportExcel()"
+                  [disabled]="filteredRecords().length === 0"
+                  class="mc-btn mc-btn-sm"
+                >
+                  <span>Export to Excel (.xlsx)</span>
+                  <span class="arr">&rarr;</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="onExportCsv()"
+                  [disabled]="filteredRecords().length === 0"
+                  class="mc-btn mc-btn-ghost mc-btn-sm"
+                  title="Export to CSV"
+                >
+                  <span>Export to CSV</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -375,6 +387,18 @@ export class RedRecordsModalComponent {
       return searchable.includes(query);
     });
   });
+
+  protected async onExportExcel(): Promise<void> {
+    const records = this.filteredRecords();
+    if (records.length === 0) return;
+    const cat = this.activeCategory();
+    const categoryOrReport = `RedRecords_${cat}`;
+    const uploadedFileName = records[0]?.sourceFileName ?? null;
+    await exportRecordsToExcel(records, {
+      categoryOrReport,
+      uploadedFileName,
+    });
+  }
 
   protected onExportCsv(): void {
     const records = this.filteredRecords();

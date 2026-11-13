@@ -19,8 +19,9 @@ import {
   ScreeningCategory,
   ScreeningSource,
 } from '../../models/sanctions.models';
-import { SanctionsDataService } from '../../services/sanctions-data.service';
+import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
 import { exportRecordsToCsv } from '../../utils/csv-export.util';
+import { exportRecordsToExcel } from '../../utils/excel-export.util';
 
 function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
   return (record.matchedTerms ?? [record.category]).includes(category);
@@ -47,6 +48,7 @@ export class DashboardComponent {
   protected readonly selectedReportCountry = signal<string>('ALL');
   protected readonly uploadStatusMessage = signal<string | null>(null);
   protected readonly isDraggingFiles = signal<boolean>(false);
+  protected readonly builtInExcelFiles = BUILT_IN_EXCEL_FILES;
 
   // Modal state
   protected readonly modalContext = signal<KpiModalContext | null>(null);
@@ -788,6 +790,52 @@ export class DashboardComponent {
 
   protected closeRedModal(): void {
     this.modalContext.set(null);
+  }
+
+  protected async loadDirectExcel(fileName: string): Promise<void> {
+    try {
+      const result = await this.dataService.loadBuiltInExcel(fileName);
+      this.dataService.datasetMode.set('UPLOADED_ONLY');
+      this.onPresetChange('ALL_DATES');
+      this.uploadStatusMessage.set(
+        `Loaded ${result.added} records directly from ${fileName}. Active total: ${this.dataService.uploadedExcelRecords().length} records across ${this.dataService.uploadedFiles().length} file(s).`
+      );
+    } catch (err) {
+      this.uploadStatusMessage.set(
+        `Could not load ${fileName}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  protected onDirectExcelSelect(event: Event): void {
+    const select = event.target as HTMLSelectElement | null;
+    if (!select || !select.value) return;
+    const fileName = select.value;
+    select.value = '';
+    void this.loadDirectExcel(fileName);
+  }
+
+  protected async exportReportBriefExcel(): Promise<void> {
+    const report = this.selectedReport();
+    let records = this.filteredRecords();
+
+    if (report === 'SanctionedDocumentsDetails') {
+      records = records.filter(
+        (r) => r.status === 'Red' || (r.matchedTerms && r.matchedTerms.length > 0)
+      );
+    } else if (report === 'BlockedArticle') {
+      records = records.filter((r) => r.status === 'Red');
+    } else if (report === 'DocumentHistory' || report === 'Document History') {
+      records = [...records].sort((a, b) => b.decisionDate.localeCompare(a.decisionDate));
+    } else if (report === 'AuthorsHistory' || report === 'Authors History') {
+      records = [...records].sort((a, b) => a.authorName.localeCompare(b.authorName));
+    }
+
+    const uploadedFileName = this.dataService.uploadedFiles()[0]?.fileName ?? null;
+    await exportRecordsToExcel(records, {
+      categoryOrReport: report,
+      uploadedFileName,
+    });
   }
 
   protected exportReportBriefCsv(): void {

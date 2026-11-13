@@ -223,4 +223,103 @@ describe('SanctionsDataService', () => {
     expect(service.records().length).toBe(5);
     expect(service.uploadedFiles().length).toBe(2);
   });
+
+  it('should parse SanctionedReport schema with continuation rows and bracketed affiliations', async () => {
+    const headers = [
+      'Document_Id',
+      'Manuscript_Id',
+      'Status',
+      'Decision_Date',
+      'Journal_Name',
+      'Document_Source',
+      'Reason',
+      'Author_Name',
+      'Email',
+      'Author_Id',
+      'Pal_Id',
+      'Country',
+      'Affiliations',
+    ];
+    const sheetData = [
+      headers,
+      [
+        '65127624',
+        'TDSC-2026-05-1900',
+        'RED',
+        'Tue May 12 18:34:41 IST 2026',
+        'Transactions on Dependable and Secure Computing',
+        'S1M',
+        'PCL',
+        'Lee, Dr. Chien-Ding',
+        'cdlee227@mail.nou.edu.tw',
+        '143694903',
+        '',
+        '[Venezuela]',
+        '[City : Caracas, Country : Venezuela, Bolivarian Republic of, Country Code : VE, Organisation Name : National Open University, Postal Code : 1010]',
+      ],
+      [
+        '65089637',
+        '26-TIE-2675',
+        'RED',
+        'Tue May 12 18:34:39 IST 2026',
+        'Transactions on Industrial Electronics',
+        'S1M',
+        'PAL',
+        'Xie, Prof. Hui',
+        '0909031059@nue.edu.cn',
+        '149533402',
+        '[4043]',
+        '',
+        '[City : Wuhan, Country : China, Organisation Name : Naval University of Engineering]',
+      ],
+      ['', '', '', '', '', '', '', 'Co-Authors', '', '', '', '', ''],
+      [
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        'Deng, Dr. Bo',
+        'm200770375@alumni.hust.edu.cn',
+        '149533401',
+        '',
+        '',
+        '[City : Wuhan, Country : China, Organisation Name : Wuhan University]',
+      ],
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, 'S1M');
+    const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer | Uint8Array;
+    const bytes = out instanceof ArrayBuffer ? new Uint8Array(out) : new Uint8Array(out);
+    const buffer = bytes.slice().buffer;
+
+    const result = await service.importUploadedExcel(
+      buffer,
+      'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx'
+    );
+    expect(result.parsed).toBe(3); // 2 primary + 1 co-author (Co-Authors header skipped)
+    expect(result.added).toBe(3);
+
+    const xie = service.records().find((r) => r.authorName === 'Xie, Prof. Hui');
+    expect(xie?.documentId).toBe('65089637');
+    expect(xie?.palId).toBe('4043');
+    expect(xie?.category).toBe('PAL');
+    expect(xie?.status).toBe('Red');
+    expect(xie?.coAuthors).toContain('Deng, Dr. Bo');
+
+    const deng = service.records().find((r) => r.authorName === 'Deng, Dr. Bo');
+    expect(deng?.documentId).toBe('65089637');
+    expect(deng?.status).toBe('Green');
+    expect(deng?.coAuthors).toContain('Xie, Prof. Hui');
+
+    const lee = service.records().find((r) => r.authorName === 'Lee, Dr. Chien-Ding');
+    expect(lee?.category).toBe('PCL');
+    expect(lee?.country).toBe('Venezuela');
+    expect(lee?.city).toBe('Caracas');
+    expect(lee?.decisionDate).toBe('2026-05-12');
+  });
 });

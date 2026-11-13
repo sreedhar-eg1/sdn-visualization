@@ -227,6 +227,40 @@ function buildInitialRecords(today: Date): SanctionsRecord[] {
   return records;
 }
 
+export interface AvailableExcelFile {
+  name: string;
+  label: string;
+  description: string;
+  recordCount: number;
+}
+
+export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
+  {
+    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx',
+    label: 'Sanctioned Report (S1M + IDAMS)',
+    description: 'Multi-source screened author & document report with co-authors',
+    recordCount: 27,
+  },
+  {
+    name: 'MQ601_1791978056557.xlsx',
+    label: 'MQ601 Sanctions Export',
+    description: '44 screened author & document records with match scores',
+    recordCount: 44,
+  },
+  {
+    name: 'PCL_Report_12May2026.xlsx',
+    label: 'PCL Country Report',
+    description: 'Prohibited Country List screened records (Venezuela & Crimea)',
+    recordCount: 9,
+  },
+  {
+    name: 'SanctionedReport_IDAMS_12May2026.xlsx',
+    label: 'IDAMS Sanctioned Report',
+    description: 'IDAMS feed records with author affiliations',
+    recordCount: 8,
+  },
+];
+
 @Injectable({
   providedIn: 'root',
 })
@@ -597,6 +631,20 @@ export class SanctionsDataService {
 
   loadBuiltInSampleCsv(): { parsed: number; added: number; skippedDuplicates: number } {
     return this.importUploadedCsv(UPLOADED_SANCTIONS_CSV, 'idams-sample-23-rows.csv');
+  }
+
+  /**
+   * Loads an uploaded Excel workbook directly from the application's /data/ assets.
+   */
+  async loadBuiltInExcel(
+    fileName: string
+  ): Promise<{ parsed: number; added: number; skippedDuplicates: number }> {
+    const response = await fetch(`data/${fileName}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load ${fileName}: ${response.statusText}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return this.importUploadedExcel(buffer, fileName);
   }
 
   toggleWatchlistSource(id: string): void {
