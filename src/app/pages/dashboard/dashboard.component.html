@@ -319,8 +319,8 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().flagEvents }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().flagEventsRed }} Red</span>
+            <div class="n">{{ kpiMetrics().flagEvents ?? 0 }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().flagEventsRed ?? 0 }} Red</span>
           </div>
           <div class="k">Flag Events</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
@@ -343,12 +343,12 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().uniqueDocuments }}</div>
-            <span class="mc-tag ok">{{ kpiMetrics().greenDocuments }} Green</span>
+            <div class="n">{{ kpiMetrics().uniqueDocuments ?? 0 }}</div>
+            <span class="mc-tag ok">{{ kpiMetrics().greenDocuments ?? 0 }} Green</span>
           </div>
           <div class="k">Unique Documents</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>{{ kpiMetrics().redDocuments }} Red docs</span>
+            <span>{{ kpiMetrics().redDocuments ?? 0 }} Red docs</span>
             <span class="arr">&rarr;</span>
           </div>
         </button>
@@ -367,8 +367,8 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().flaggedAuthorIden }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().flaggedAuthorsRed }} Red</span>
+            <div class="n">{{ kpiMetrics().flaggedAuthorIden ?? 0 }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().flaggedAuthorsRed ?? 0 }} Red</span>
           </div>
           <div class="k">Flagged Author Iden</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
@@ -391,8 +391,8 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().coAuthorRecords }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().coAuthorsRed }} Red</span>
+            <div class="n">{{ kpiMetrics().coAuthorRecords ?? 0 }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().coAuthorsRed ?? 0 }} Red</span>
           </div>
           <div class="k">Co-author Records</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
@@ -415,8 +415,8 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().palEvents }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().palRed }} Red</span>
+            <div class="n">{{ kpiMetrics().palEvents ?? 0 }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().palRed ?? 0 }} Red</span>
           </div>
           <div class="k">PAL Events</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
@@ -439,8 +439,8 @@
           class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().pclEvents }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().pclRed }} Red</span>
+            <div class="n">{{ kpiMetrics().pclEvents ?? 0 }}</div>
+            <span class="mc-tag bad">{{ kpiMetrics().pclRed ?? 0 }} Red</span>
           </div>
           <div class="k">PCL Events</div>
           <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
@@ -448,6 +448,23 @@
             <span class="arr">&rarr;</span>
           </div>
         </button>
+      </div>
+
+      <!-- Single-Line PAL Organization Stat Card -->
+      <div class="mc-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 mt-3">
+        <div class="flex items-center gap-3">
+          <span class="mc-tag ok">PAL Stat</span>
+          <div>
+            <span class="mc-eyebrow text-xs">PAL Top Organization Frequency</span>
+            <div class="text-sm font-semibold" style="color: var(--mc-oxblood)">
+              {{ palTopOrganization().count > 0 ? palTopOrganization().organization : 'No Organization Found' }}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <div class="text-3xl font-serif font-bold" style="color: var(--mc-oxblood)">{{ palTopOrganization().count ?? 0 }}</div>
+          <span class="mc-small font-medium opacity-70">Highest Org Count</span>
+        </div>
       </div>
     </section>
 
@@ -608,6 +625,66 @@
             </div>
           </div>
 
+          <!-- Trends Dynamic Charts: Most Appeared Journal, PCL Match by Country, Repeatedly Sanctioned Authors -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Trend Chart 1: Most Appeared Journal -->
+            <div class="mc-card">
+              <div class="mc-card-head">
+                <div>
+                  <span class="mc-eyebrow">— Journals</span>
+                  <h3 class="mc-h3">Most Appeared Journal</h3>
+                  <p class="mc-small">Top publication venues by submission frequency</p>
+                </div>
+                <span class="mc-tag neutral">Top Venues</span>
+              </div>
+              <div class="w-full min-h-[260px]">
+                <highcharts-chart
+                  [options]="journalTrendChartOptions()"
+                  [oneToOne]="true"
+                  class="block w-full h-[260px]"
+                />
+              </div>
+            </div>
+
+            <!-- Trend Chart 2: PCL Match by Country -->
+            <div class="mc-card">
+              <div class="mc-card-head">
+                <div>
+                  <span class="mc-eyebrow">— Jurisdictions</span>
+                  <h3 class="mc-h3">PCL Match by Country</h3>
+                  <p class="mc-small">Most frequent countries matched under PCL rules</p>
+                </div>
+                <span class="mc-tag warn">PCL Match</span>
+              </div>
+              <div class="w-full min-h-[260px]">
+                <highcharts-chart
+                  [options]="pclCountryTrendChartOptions()"
+                  [oneToOne]="true"
+                  class="block w-full h-[260px]"
+                />
+              </div>
+            </div>
+
+            <!-- Trend Chart 3: Repeatedly Sanctioned Authors -->
+            <div class="mc-card">
+              <div class="mc-card-head">
+                <div>
+                  <span class="mc-eyebrow">— Repeat Violations</span>
+                  <h3 class="mc-h3">Repeatedly Sanctioned Authors</h3>
+                  <p class="mc-small">Authors flagged Red multiple times with repeat count</p>
+                </div>
+                <span class="mc-tag bad">Leaderboard</span>
+              </div>
+              <div class="w-full min-h-[260px]">
+                <highcharts-chart
+                  [options]="repeatAuthorsChartOptions()"
+                  [oneToOne]="true"
+                  class="block w-full h-[260px]"
+                />
+              </div>
+            </div>
+          </div>
+
           <!-- Trends Split Detail View: Top Articles Leaderboard + Source Red Breakdown -->
           <div class="mc-grid-2">
             <!-- Left: Top Submitted / Repeating Articles Leaderboard -->
@@ -753,17 +830,17 @@
                   <div class="t font-semibold">{{ item.label }} Documents</div>
                   <div class="mc-small">{{ item.fullName }}</div>
                 </div>
-                <div class="mc-code font-bold">{{ item.totalDocs }} Unique Docs</div>
+                <div class="mc-code font-bold">{{ item.totalDocs ?? 0 }} Unique Docs</div>
               </div>
 
               <div class="grid grid-cols-2 gap-2 mt-2">
                 <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
                   <span class="mc-tag bad">Red</span>
-                  <span class="mc-num font-bold text-lg" style="color: var(--mc-bad)">{{ item.redDocs }}</span>
+                  <span class="mc-num font-bold text-lg" style="color: var(--mc-bad)">{{ item.redDocs ?? 0 }}</span>
                 </div>
                 <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
                   <span class="mc-tag ok">Green</span>
-                  <span class="mc-num font-bold text-lg" style="color: var(--mc-ok)">{{ item.greenDocs }}</span>
+                  <span class="mc-num font-bold text-lg" style="color: var(--mc-ok)">{{ item.greenDocs ?? 0 }}</span>
                 </div>
               </div>
             </button>

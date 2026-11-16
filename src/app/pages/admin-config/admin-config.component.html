@@ -115,14 +115,14 @@
                 />
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="font-medium text-sm truncate">
+                    <span class="font-medium text-sm truncate" [title]="src.name">
                       {{ src.name }}
                     </span>
                     <span [class]="src.enabled ? 'mc-tag ok text-[10px]' : 'mc-tag neutral text-[10px]'">
                       {{ src.enabled ? 'Enabled' : 'Disabled' }}
                     </span>
                   </div>
-                  <p class="mc-small text-xs mt-0.5 line-clamp-2">{{ src.description }}</p>
+                  <p class="mc-small text-xs mt-0.5 line-clamp-2" [title]="src.description">{{ src.description }}</p>
                   <div class="flex items-center gap-2 mt-1.5 mc-code text-[11px] opacity-60">
                     <span>{{ src.recordCount.toLocaleString() }} records</span>
                     <span>&bull;</span>
@@ -257,11 +257,11 @@
               @for (loc of dataService.restrictedLocations(); track loc.id) {
                 <tr [class.opacity-50]="!loc.active">
                   <td>
-                    <div class="font-semibold">
+                    <div class="font-semibold" [title]="loc.country + ' (' + loc.isoCode + ')'">
                       {{ loc.country }}
                       <span class="mc-code mc-small">({{ loc.isoCode }})</span>
                     </div>
-                    <div class="mc-small">{{ loc.city }}</div>
+                    <div class="mc-small" [title]="loc.city">{{ loc.city }}</div>
                   </td>
                   <td>
                     <span
@@ -477,12 +477,12 @@
               @for (entry of filteredPalEntries(); track entry.id) {
                 <tr>
                   <td>
-                    <div class="font-semibold">{{ entry.fullName }}</div>
-                    <div class="mc-code mc-small">{{ entry.authorId }}</div>
+                    <div class="font-semibold truncate max-w-[220px]" [title]="entry.fullName">{{ entry.fullName }}</div>
+                    <div class="mc-code mc-small truncate max-w-[220px]" [title]="entry.authorId">{{ entry.authorId }}</div>
                   </td>
                   <td>
-                    <div>{{ entry.affiliation }}</div>
-                    <div class="mc-small">{{ entry.country }}</div>
+                    <div class="truncate max-w-[240px]" [title]="entry.affiliation">{{ entry.affiliation }}</div>
+                    <div class="mc-small truncate max-w-[240px]" [title]="entry.country">{{ entry.country }}</div>
                   </td>
                   <td>
                     <span [class]="entry.severity === 'Red' ? 'mc-tag bad' : 'mc-tag warn'">

@@ -14,7 +14,10 @@ import {
   CategoryRedGreenSummary,
   DatasetMode,
   DateRangePreset,
+  JournalAppearanceTrend,
   KpiModalContext,
+  PclCountryTrend,
+  RepeatedlySanctionedAuthor,
   ReportType,
   SanctionsRecord,
   ScreeningCategory,
@@ -25,6 +28,7 @@ import {
 import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
 import { exportRecordsToCsv } from '../../utils/csv-export.util';
 import { exportRecordsToExcel } from '../../utils/excel-export.util';
+import { parseAffiliationOrganization } from '../../utils/sanctions-csv-parser.util';
 
 function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
   return (record.matchedTerms ?? [record.category]).includes(category);
@@ -97,18 +101,19 @@ export class DashboardComponent {
     const source = this.selectedSource();
     const start = this.startDate();
     const end = this.endDate();
-    const report = this.selectedReport();
-    const reportCountry = this.selectedReportCountry();
+    const preset = this.selectedPreset();
 
     return this.dataService.records().filter((record) => {
       if (source !== 'ALL' && record.source !== source) {
         return false;
       }
-      if (start && record.decisionDate < start) {
-        return false;
-      }
-      if (end && record.decisionDate > end) {
-        return false;
+      if (preset !== 'ALL_DATES') {
+        if (start && record.decisionDate < start) {
+          return false;
+        }
+        if (end && record.decisionDate > end) {
+          return false;
+        }
       }
       return true;
     });
@@ -356,17 +361,46 @@ export class DashboardComponent {
     () => this.filteredRecords().filter((r) => recordHasCategory(r, 'PCL')).length
   );
 
-  // Primary 6 KPI Metrics
+  // Primary 6 KPI Metrics + SDN counts with strict primary-author mapping & zero fallback
   protected readonly kpiMetrics = computed(() => {
     const recs = this.filteredRecords();
     const authorIdentityKey = (r: SanctionsRecord): string =>
       r.authorEmail ? r.authorEmail.toLowerCase() : r.authorId;
 
     const uniqueDocs = new Set(recs.map((r) => r.documentId));
-    const uniqueFlaggedAuthors = new Set(recs.map(authorIdentityKey));
-    const totalCoAuthors = recs.reduce((sum, r) => sum + r.coAuthorCount, 0);
-    const palEvents = recs.filter((r) => recordHasCategory(r, 'PAL'));
-    const pclEvents = recs.filter((r) => recordHasCategory(r, 'PCL'));
+
+    // Precisely isolate primary authors (above Co-Authors delimiter) and co-authors
+    const primaryRecs = recs.filter((r) => !r.isCoAuthor);
+    const coAuthorRecs = recs.filter((r) => r.isCoAuthor);
+
+    const uniquePrimaryAuthors = new Set(primaryRecs.map(authorIdentityKey));
+    const flaggedPrimaryRedAuthors = new Set(
+      primaryRecs
+        .filter(
+          (r) =>
+            r.status === 'Red' &&
+            (recordHasCategory(r, 'PAL') ||
+              recordHasCategory(r, 'PCL') ||
+              recordHasCategory(r, 'SDN'))
+        )
+        .map(authorIdentityKey)
+    );
+
+    const totalCoAuthors =
+      coAuthorRecs.length > 0
+        ? coAuthorRecs.length
+        : recs.reduce((sum, r) => sum + r.coAuthorCount, 0);
+
+    const coAuthorsRed =
+      coAuthorRecs.length > 0
+        ? coAuthorRecs.filter((r) => r.status === 'Red').length
+        : recs
+            .filter((r) => r.status === 'Red')
+            .reduce((sum, r) => sum + r.coAuthorCount, 0);
+
+    const palEvents = primaryRecs.filter((r) => recordHasCategory(r, 'PAL'));
+    const pclEvents = primaryRecs.filter((r) => recordHasCategory(r, 'PCL'));
+    const sdnEvents = primaryRecs.filter((r) => recordHasCategory(r, 'SDN'));
 
     const redDocsSet = new Set(
       recs.filter((r) => r.status === 'Red').map((r) => r.documentId)
@@ -376,27 +410,58 @@ export class DashboardComponent {
     ).length;
 
     return {
-      flagEvents: recs.length,
-      flagEventsRed: recs.filter((r) => r.status === 'Red').length,
-      uniqueDocuments: uniqueDocs.size,
-      redDocuments: redDocsSet.size,
-      greenDocuments: greenDocsCount,
-      flaggedAuthorIden: uniqueFlaggedAuthors.size,
-      flaggedAuthorsRed: new Set(
-        recs.filter((r) => r.status === 'Red').map(authorIdentityKey)
-      ).size,
-      coAuthorRecords: totalCoAuthors,
-      coAuthorsRed: recs
-        .filter((r) => r.status === 'Red')
-        .reduce((sum, r) => sum + r.coAuthorCount, 0),
-      palEvents: palEvents.length,
-      palRed: palEvents.filter((r) => r.status === 'Red').length,
-      pclEvents: pclEvents.length,
-      pclRed: pclEvents.filter((r) => r.status === 'Red').length,
+      flagEvents: recs.length ?? 0,
+      flagEventsRed: recs.filter((r) => r.status === 'Red').length ?? 0,
+      uniqueDocuments: uniqueDocs.size ?? 0,
+      redDocuments: redDocsSet.size ?? 0,
+      greenDocuments: greenDocsCount ?? 0,
+      flaggedAuthorIden: uniquePrimaryAuthors.size ?? 0,
+      flaggedAuthorsRed: flaggedPrimaryRedAuthors.size ?? 0,
+      coAuthorRecords: totalCoAuthors ?? 0,
+      coAuthorsRed: coAuthorsRed ?? 0,
+      palEvents: palEvents.length ?? 0,
+      palRed: palEvents.filter((r) => r.status === 'Red').length ?? 0,
+      pclEvents: pclEvents.length ?? 0,
+      pclRed: pclEvents.filter((r) => r.status === 'Red').length ?? 0,
+      sdnEvents: sdnEvents.length ?? 0,
+      sdnRed: sdnEvents.filter((r) => r.status === 'Red').length ?? 0,
     };
   });
 
-  // Document Red vs Green breakdown across PAL, PCL, and SDN
+  // Single-line stat for PAL: extracts organization from JSON/affiliation and returns highest count (or 0)
+  protected readonly palTopOrganization = computed<{ organization: string; count: number }>(() => {
+    const recs = this.filteredRecords();
+    const palRecords = recs.filter(
+      (r) =>
+        !r.isCoAuthor &&
+        (recordHasCategory(r, 'PAL') ||
+          (r.reason && r.reason.toUpperCase().includes('PAL')))
+    );
+
+    const counts = new Map<string, number>();
+    for (const r of palRecords) {
+      const org =
+        r.organization && r.organization !== 'Unspecified Affiliation'
+          ? r.organization
+          : parseAffiliationOrganization(r.affiliationsRaw);
+      if (org && org.trim().length > 0) {
+        const cleanOrg = org.trim();
+        counts.set(cleanOrg, (counts.get(cleanOrg) || 0) + 1);
+      }
+    }
+
+    if (counts.size === 0) {
+      return { organization: 'None', count: 0 };
+    }
+
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    return {
+      organization: sorted[0][0],
+      count: sorted[0][1],
+    };
+  });
+
+  // Document Red vs Green breakdown across PAL, PCL, and SDN with zero fallback
   protected readonly watchlistDispositions = computed<CategoryRedGreenSummary[]>(() => {
     const recs = this.filteredRecords();
     const categories: ReadonlyArray<{
@@ -421,9 +486,9 @@ export class DashboardComponent {
         category,
         label,
         fullName,
-        redDocs: redDocIds.size,
-        greenDocs,
-        totalDocs: allDocIds.size,
+        redDocs: redDocIds.size ?? 0,
+        greenDocs: greenDocs ?? 0,
+        totalDocs: allDocIds.size ?? 0,
       };
     });
   });
@@ -638,6 +703,395 @@ export class DashboardComponent {
           name: 'Cleared / Green',
           data: greenData,
           color: '#3E7D69',
+        },
+      ],
+    };
+  });
+
+  // Dynamic Trend 1: Most Appeared Journal
+  protected readonly mostAppearedJournals = computed<JournalAppearanceTrend[]>(() => {
+    const recs = this.filteredRecords();
+    const map = new Map<string, { count: number; redCount: number }>();
+    for (const r of recs) {
+      const jName = r.journalName?.trim();
+      if (!jName || jName === 'N/A' || jName === 'null') continue;
+      const current = map.get(jName) ?? { count: 0, redCount: 0 };
+      current.count += 1;
+      if (r.status === 'Red') current.redCount += 1;
+      map.set(jName, current);
+    }
+    return Array.from(map.entries())
+      .map(([journalName, val]) => ({
+        journalName,
+        count: val.count,
+        redCount: val.redCount,
+      }))
+      .sort((a, b) => b.count - a.count || b.redCount - a.redCount)
+      .slice(0, 6);
+  });
+
+  protected readonly journalTrendChartOptions = computed<Highcharts.Options>(() => {
+    const journals = this.mostAppearedJournals();
+    const hasData = journals.length > 0;
+    const categories = hasData ? journals.map((j) => j.journalName) : ['No Journal Recorded'];
+    const totalData = hasData ? journals.map((j) => j.count) : [0];
+    const redData = hasData ? journals.map((j) => j.redCount) : [0];
+
+    return {
+      chart: { type: 'bar', height: 260, backgroundColor: 'transparent' },
+      title: {
+        text: 'Most Appeared Journal',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '17px',
+          fontWeight: '400',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Top journals by submission frequency in screened pipeline',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+          color: 'rgba(72, 17, 17, 0.65)',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories,
+        lineColor: 'rgba(72, 17, 17, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'Frequency',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.65)',
+            fontSize: '10px',
+          },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.10)',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#481111',
+        },
+      },
+      tooltip: {
+        shared: true,
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 3,
+          dataLabels: { enabled: true, style: { fontSize: '10px', fontWeight: 'bold' } },
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          name: 'Total Submissions',
+          data: totalData,
+          color: '#3C476A',
+        },
+        {
+          type: 'bar',
+          name: 'Red Violations',
+          data: redData,
+          color: '#B5524A',
+        },
+      ],
+    };
+  });
+
+  // Dynamic Trend 2: PCL Match by Country
+  protected readonly pclCountryTrends = computed<PclCountryTrend[]>(() => {
+    const recs = this.filteredRecords();
+    const pclRecs = recs.filter(
+      (r) =>
+        recordHasCategory(r, 'PCL') ||
+        (r.reason && r.reason.toUpperCase().includes('PCL'))
+    );
+    const countryMap = new Map<string, { count: number; redCount: number }>();
+    for (const r of pclRecs) {
+      const c = r.country?.trim();
+      if (!c || c === 'Unspecified') continue;
+      const current = countryMap.get(c) ?? { count: 0, redCount: 0 };
+      current.count += 1;
+      if (r.status === 'Red') current.redCount += 1;
+      countryMap.set(c, current);
+    }
+    return Array.from(countryMap.entries())
+      .map(([country, val]) => ({
+        country,
+        count: val.count,
+        redCount: val.redCount,
+      }))
+      .sort((a, b) => b.count - a.count || b.redCount - a.redCount)
+      .slice(0, 6);
+  });
+
+  protected readonly pclCountryTrendChartOptions = computed<Highcharts.Options>(() => {
+    const list = this.pclCountryTrends();
+    const hasData = list.length > 0;
+    const categories = hasData ? list.map((c) => c.country) : ['No PCL Matches'];
+    const counts = hasData ? list.map((c) => c.count) : [0];
+    const redCounts = hasData ? list.map((c) => c.redCount) : [0];
+
+    return {
+      chart: { type: 'column', height: 260, backgroundColor: 'transparent' },
+      title: {
+        text: 'PCL Match by Country',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '17px',
+          fontWeight: '400',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Countries appearing most frequently when Reason contains PCL match',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+          color: 'rgba(72, 17, 17, 0.65)',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories,
+        lineColor: 'rgba(72, 17, 17, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'PCL Frequency',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.65)',
+            fontSize: '10px',
+          },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.10)',
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#481111',
+        },
+      },
+      tooltip: {
+        shared: true,
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        column: {
+          borderRadius: 4,
+          dataLabels: { enabled: true, style: { fontSize: '10px', fontWeight: 'bold' } },
+        },
+      },
+      series: [
+        {
+          type: 'column',
+          name: 'PCL Matches',
+          data: counts,
+          color: '#A86A1E',
+        },
+        {
+          type: 'column',
+          name: 'Red Flagged',
+          data: redCounts,
+          color: '#B5524A',
+        },
+      ],
+    };
+  });
+
+  // Dynamic Trend 3: Repeatedly Sanctioned Authors
+  protected readonly repeatedlySanctionedAuthors = computed<RepeatedlySanctionedAuthor[]>(() => {
+    const recs = this.filteredRecords();
+    const primaryRedRecs = recs.filter(
+      (r) =>
+        !r.isCoAuthor &&
+        r.status === 'Red' &&
+        (recordHasCategory(r, 'PAL') ||
+          recordHasCategory(r, 'PCL') ||
+          recordHasCategory(r, 'SDN'))
+    );
+
+    const authorMap = new Map<
+      string,
+      {
+        authorName: string;
+        repeatCount: number;
+        sources: Set<ScreeningSource>;
+        reasons: Set<string>;
+        organization?: string;
+        country: string;
+      }
+    >();
+
+    for (const r of primaryRedRecs) {
+      const name = r.authorName?.trim();
+      if (!name || name === 'Unknown Author') continue;
+      const entry = authorMap.get(name) ?? {
+        authorName: name,
+        repeatCount: 0,
+        sources: new Set(),
+        reasons: new Set(),
+        organization: r.organization,
+        country: r.country,
+      };
+      entry.repeatCount += 1;
+      entry.sources.add(r.source);
+      if (r.reason) entry.reasons.add(r.reason);
+      if (!entry.organization && r.organization) entry.organization = r.organization;
+      if (entry.country === 'Unspecified' && r.country && r.country !== 'Unspecified') {
+        entry.country = r.country;
+      }
+      authorMap.set(name, entry);
+    }
+
+    const repeats = Array.from(authorMap.values())
+      .filter((a) => a.repeatCount > 1)
+      .map((a) => ({
+        authorName: a.authorName,
+        repeatCount: a.repeatCount,
+        sources: Array.from(a.sources),
+        reasons: Array.from(a.reasons),
+        organization: a.organization,
+        country: a.country,
+      }))
+      .sort((a, b) => b.repeatCount - a.repeatCount);
+
+    if (repeats.length > 0) return repeats.slice(0, 8);
+
+    // Fallback to top single violations if no repeat > 1 in current slice
+    return Array.from(authorMap.values())
+      .map((a) => ({
+        authorName: a.authorName,
+        repeatCount: a.repeatCount,
+        sources: Array.from(a.sources),
+        reasons: Array.from(a.reasons),
+        organization: a.organization,
+        country: a.country,
+      }))
+      .sort((a, b) => b.repeatCount - a.repeatCount)
+      .slice(0, 8);
+  });
+
+  protected readonly repeatAuthorsChartOptions = computed<Highcharts.Options>(() => {
+    const authors = this.repeatedlySanctionedAuthors();
+    const hasData = authors.length > 0;
+    const categories = hasData ? authors.map((a) => a.authorName) : ['No Sanctioned Authors'];
+    const data = hasData ? authors.map((a) => a.repeatCount) : [0];
+
+    return {
+      chart: { type: 'bar', height: 260, backgroundColor: 'transparent' },
+      title: {
+        text: 'Repeatedly Sanctioned Authors',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '17px',
+          fontWeight: '400',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Authors sanctioned multiple times displaying unique repeat counts',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+          color: 'rgba(72, 17, 17, 0.65)',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories,
+        lineColor: 'rgba(72, 17, 17, 0.14)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'Repeat Count',
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(72, 17, 17, 0.65)',
+            fontSize: '10px',
+          },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.10)',
+      },
+      legend: { enabled: false },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> sanctioned red violations',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 3,
+          dataLabels: {
+            enabled: true,
+            format: '{point.y} repeats',
+            style: { fontSize: '10px', fontWeight: 'bold', color: '#481111' },
+          },
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          name: 'Unique Repeat Count',
+          data,
+          color: '#B5524A',
         },
       ],
     };

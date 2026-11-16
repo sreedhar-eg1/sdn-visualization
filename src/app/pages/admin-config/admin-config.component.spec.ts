@@ -79,4 +79,21 @@ describe('AdminConfigComponent', () => {
     expect(el.textContent).toContain('Data got ingested');
     expect(el.textContent).toContain('Dr. Tariq Al-Mansoor');
   });
+
+  it('should render hover title attribute on truncated names in source enablement and PAL registry', async () => {
+    const fixture = TestBed.createComponent(AdminConfigComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    // Check Source Enablement title hover
+    const sourceWithTitle = el.querySelector('span.truncate[title]');
+    expect(sourceWithTitle).toBeTruthy();
+    expect(sourceWithTitle?.getAttribute('title')).toBeTruthy();
+
+    // Check PAL table entries have hover title
+    const palNameWithTitle = el.querySelector('td div[title]');
+    expect(palNameWithTitle).toBeTruthy();
+    expect(palNameWithTitle?.getAttribute('title')).toBeTruthy();
+  });
 });

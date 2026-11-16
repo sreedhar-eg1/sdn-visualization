@@ -234,6 +234,12 @@ export interface AvailableExcelFile {
 
 export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
   {
+    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx',
+    label: 'Sanctioned Report (2025 S1M, IDAMS, PAPERCEPT)',
+    description: 'Full year 2025 multi-source screened author & document report',
+    recordCount: 2772,
+  },
+  {
     name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx',
     label: 'Sanctioned Report (S1M + IDAMS)',
     description: 'Multi-source screened author & document report with co-authors',
@@ -516,8 +522,9 @@ export class SanctionsDataService {
           .map((r) => r.decisionDate)
           .filter(Boolean)
           .sort();
+        const earliest = allDates[0] && allDates[0] < '2025-01-01' ? allDates[0] : '2025-01-01';
         return {
-          start: allDates[0] ?? formatIsoDate(addDays(this.today, -365)),
+          start: allDates[0] ?? earliest,
           end: allDates[allDates.length - 1] && allDates[allDates.length - 1] > end
             ? allDates[allDates.length - 1]
             : end,

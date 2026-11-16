@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHighcharts } from 'highcharts-angular';
+import * as XLSX from 'xlsx';
 import { DashboardComponent } from './dashboard.component';
 import { SanctionsDataService } from '../../services/sanctions-data.service';
 
@@ -216,5 +217,132 @@ describe('DashboardComponent', () => {
     expect(blockedTrends.mostSubmittedArticle).toBeTruthy();
     // In BlockedArticle report, all records have Red status
     expect(blockedTrends.mostSubmittedArticle?.redCount).toBe(blockedTrends.mostSubmittedArticle?.submissionCount);
+  });
+
+  it('should forcefully include Papercept records with empty Document_Id and isolate primary authors from co-authors', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dataService = TestBed.inject(SanctionsDataService);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Create an in-memory workbook with PAPERCEPT sheet having empty Document_Id
+    const wb = XLSX.utils.book_new();
+    const paperceptRows = [
+      ['Document_Id', 'Manuscript_Id', 'Status', 'Decision_Date', 'Journal_Name', 'Document_Source', 'Reason', 'Author_Name', 'Email', 'Author_Id', 'Pal_Id', 'Country', 'Affiliations'],
+      ['', '25-0194', 'RED', '2025-06-27', 'IEEE Journal on Oceanic Engineering', 'Papercept', 'PCL', 'Delgi Peraza', 'dperaza@example.com', '156724', '', '[Venezuela]', '[Country : Venezuela, Organisation Name : Universidad de Carabobo]'],
+      ['', '', '', '', '', '', '', 'Co-Authors', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', 'Oliger Mendoza', 'oliger@example.com', '156713', '', '', '[Country : China, Organisation Name : University of Science and Technology Beijing]'],
+      ['', '25-0161', 'RED', '2025-06-16', 'IEEE Journal on Oceanic Engineering', 'Papercept', 'PCL', 'Delgi Peraza', 'dperaza@example.com', '156724', '', '[Venezuela]', '[Country : Venezuela, Organisation Name : Universidad de Carabobo]'],
+      ['', '', '', '', '', '', '', 'Co-Authors', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', 'Oliger Mendoza', 'oliger@example.com', '156713', '', '', '[Country : China, Organisation Name : University of Science and Technology Beijing]']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(paperceptRows);
+    XLSX.utils.book_append_sheet(wb, ws, 'PAPERCEPT');
+
+    const wbBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    await dataService.importUploadedExcel(wbBuf, 'TestPapercept.xlsx');
+    dataService.datasetMode.set('UPLOADED_ONLY');
+    fixture.componentInstance['onPresetChange']('ALL_DATES');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const comp = fixture.componentInstance;
+    const records = comp['filteredRecords']();
+
+    // Verify all 4 records (2 primary + 2 co-authors) are forcefully included despite empty Document_Id
+    expect(records.length).toBe(4);
+    expect(records.every((r) => r.source === 'PAPERCEPT')).toBe(true);
+
+    const primaryRecs = records.filter((r) => !r.isCoAuthor);
+    const coAuthorRecs = records.filter((r) => r.isCoAuthor);
+    expect(primaryRecs.length).toBe(2);
+    expect(coAuthorRecs.length).toBe(2);
+
+    // Primary authors are mapped to adjacent reason PCL and flagged Red
+    expect(primaryRecs.every((r) => r.authorName === 'Delgi Peraza' && r.status === 'Red')).toBe(true);
+    expect(coAuthorRecs.every((r) => r.authorName === 'Oliger Mendoza' && r.status === 'Green')).toBe(true);
+
+    // Verify KPI calculations isolate primary authors
+    const kpi = comp['kpiMetrics']();
+    expect(kpi.flaggedAuthorsRed).toBe(1); // 1 unique primary author (Delgi Peraza)
+    expect(kpi.coAuthorRecords).toBe(2); // 2 co-author records
+    expect(kpi.pclEvents).toBe(2);
+    expect(kpi.palEvents).toBe(0); // 0 PAL records in Papercept
+    expect(kpi.sdnEvents).toBe(0); // 0 SDN records in Papercept
+  });
+
+  it('should compute PAL Top Organization stat, display 0 for null metrics, and react dynamically to source filter', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dataService = TestBed.inject(SanctionsDataService);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Create workbook with S1M sheet (PAL with JSON affiliations) and PAPERCEPT sheet (PCL only)
+    const wb = XLSX.utils.book_new();
+    const s1mRows = [
+      ['Document_Id', 'Manuscript_Id', 'Status', 'Decision_Date', 'Journal_Name', 'Document_Source', 'Reason', 'Author_Name', 'Email', 'Author_Id', 'Pal_Id', 'Country', 'Affiliations'],
+      ['DOC-S1M-1', 'MS-101', 'RED', '2025-05-10', 'IEEE Access', 'S1M', 'PAL', 'Author Alpha', 'alpha@org.com', 'A1', 'P1', 'Saudi Arabia', '[{"organisationName": "Princess Nourah University"}]'],
+      ['DOC-S1M-2', 'MS-102', 'RED', '2025-05-12', 'IEEE Access', 'S1M', 'PAL', 'Author Beta', 'beta@org.com', 'A2', 'P2', 'Saudi Arabia', '[{"organisationName": "Princess Nourah University"}]'],
+      ['DOC-S1M-3', 'MS-103', 'RED', '2025-05-14', 'Transactions on Electronics', 'S1M', 'PAL', 'Author Gamma', 'gamma@org.com', 'A3', 'P3', 'India', '[{"organisationName": "Koneru Lakshmaiah Education Foundation"}]'],
+    ];
+    const paperceptRows = [
+      ['Document_Id', 'Manuscript_Id', 'Status', 'Decision_Date', 'Journal_Name', 'Document_Source', 'Reason', 'Author_Name', 'Email', 'Author_Id', 'Pal_Id', 'Country', 'Affiliations'],
+      ['', 'MS-201', 'RED', '2025-06-01', 'Oceanic Eng', 'Papercept', 'PCL', 'Author Delta', 'delta@org.com', 'D1', '', 'Venezuela', '[Country : Venezuela, Organisation Name : Carabobo]'],
+    ];
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s1mRows), 'S1M');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(paperceptRows), 'PAPERCEPT');
+
+    const wbBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    await dataService.importUploadedExcel(wbBuf, 'MultiSourceTest.xlsx');
+    dataService.datasetMode.set('UPLOADED_ONLY');
+    fixture.componentInstance['onPresetChange']('ALL_DATES');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const comp = fixture.componentInstance;
+
+    // In All Sources: Top PAL org is Princess Nourah University with 2 occurrences
+    expect(comp['palTopOrganization']().organization).toBe('Princess Nourah University');
+    expect(comp['palTopOrganization']().count).toBe(2);
+
+    // Filter to PAPERCEPT: PAL count must fall back to 0 (No organization found)
+    comp['selectedSource'].set('PAPERCEPT');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(comp['palTopOrganization']().count).toBe(0);
+    const kpi = comp['kpiMetrics']();
+    expect(kpi.palEvents).toBe(0);
+    expect(kpi.sdnEvents).toBe(0);
+    expect(kpi.pclEvents).toBe(1);
+
+    // Verify Watchlist dispositions return explicit 0 for PAL and SDN under PAPERCEPT
+    const dispositions = comp['watchlistDispositions']();
+    const palDisp = dispositions.find((d) => d.category === 'PAL');
+    const sdnDisp = dispositions.find((d) => d.category === 'SDN');
+    const pclDisp = dispositions.find((d) => d.category === 'PCL');
+    expect(palDisp?.totalDocs).toBe(0);
+    expect(palDisp?.redDocs).toBe(0);
+    expect(sdnDisp?.totalDocs).toBe(0);
+    expect(pclDisp?.totalDocs).toBe(1);
+
+    // Verify dynamic trends reaction to Source filter
+    const journals = comp['mostAppearedJournals']();
+    expect(journals.length).toBe(1);
+    expect(journals[0].journalName).toBe('Oceanic Eng');
+
+    const pclCountries = comp['pclCountryTrends']();
+    expect(pclCountries.length).toBe(1);
+    expect(pclCountries[0].country).toBe('Venezuela');
+
+    // Switch back to S1M
+    comp['selectedSource'].set('S1M');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const s1mJournals = comp['mostAppearedJournals']();
+    expect(s1mJournals.some((j) => j.journalName === 'IEEE Access')).toBe(true);
+    expect(comp['palTopOrganization']().count).toBe(2);
   });
 });

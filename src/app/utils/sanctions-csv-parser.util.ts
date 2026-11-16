@@ -141,6 +141,51 @@ function normalizeDecisionDate(raw: string): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function parseAffiliationOrganization(rawAffil: string | undefined): string | null {
+  if (!rawAffil) return null;
+  const str = cleanText(rawAffil);
+  if (!str) return null;
+
+  try {
+    const parsed = JSON.parse(str);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      for (const item of parsed) {
+        if (typeof item === 'object' && item !== null) {
+          const org =
+            (item as Record<string, unknown>)['organisationName'] ||
+            (item as Record<string, unknown>)['organizationName'] ||
+            (item as Record<string, unknown>)['institution'] ||
+            (item as Record<string, unknown>)['organisationDivision'];
+          if (org && String(org).trim()) return String(org).trim();
+        }
+      }
+    } else if (typeof parsed === 'object' && parsed !== null) {
+      const org =
+        (parsed as Record<string, unknown>)['organisationName'] ||
+        (parsed as Record<string, unknown>)['organizationName'] ||
+        (parsed as Record<string, unknown>)['institution'] ||
+        (parsed as Record<string, unknown>)['organisationDivision'];
+      if (org && String(org).trim()) return String(org).trim();
+    }
+  } catch {
+    // Not valid JSON, fallback to regex / bracketed parsing
+  }
+
+  const match = str.match(/Organi[sz]ation\s*Name\s*:\s*([^,\]]+)/i);
+  if (match) {
+    const val = match[1].trim();
+    if (val && val !== 'null' && val !== 'undefined') return val;
+  }
+
+  const divMatch = str.match(/Organi[sz]ation\s*Division\s*:\s*([^,\]]+)/i);
+  if (divMatch) {
+    const val = divMatch[1].trim();
+    if (val && val !== 'null' && val !== 'undefined') return val;
+  }
+
+  return null;
+}
+
 function parseBracketedAffiliation(raw: string): RawAffiliation {
   const cleaned = cleanText(raw).replace(/^\[|\]$/g, '').trim();
   if (!cleaned) return {};
@@ -225,7 +270,8 @@ const EXPECTED_SCREENING_HEADERS = [
 export function parseSanctionsTableRows(
   rawRows: string[][],
   batchId = 'batch-default',
-  fileName = 'uploaded.csv'
+  fileName = 'uploaded.csv',
+  sheetName?: string
 ): SanctionsRecord[] {
   const rows = rawRows.filter((row) => row.some((cell) => cleanText(cell).length > 0));
   if (rows.length < 2) return [];
@@ -265,12 +311,17 @@ export function parseSanctionsTableRows(
   const pclScoreIdx = findCol('pclscore');
   const commentsIdx = findCol('comments', 'curationcomments');
 
+  const isPaperceptSheet = sheetName?.toUpperCase() === 'PAPERCEPT';
   let currentDocId = '';
   let currentDocTitle = '';
   let currentManuscriptId = '';
   let currentJournalName = '';
   let currentDocType = 'Article';
-  let currentSource: ScreeningSource = 'IDAMS';
+  let currentSource: ScreeningSource = isPaperceptSheet
+    ? 'PAPERCEPT'
+    : sheetName
+      ? normalizeSource(sheetName)
+      : 'IDAMS';
   let currentDecisionDate = '';
   let currentStatus: ComplianceStatus = 'Red';
   let isCoAuthorsSection = false;
@@ -291,19 +342,28 @@ export function parseSanctionsTableRows(
     }
 
     const explicitDocId = getVal(docIdIdx);
+    const msId = getVal(manuscriptIdIdx);
     const rowId = getVal(idIdx) || String(rIdx);
+    const isNewDoc =
+      Boolean(explicitDocId) ||
+      (isPaperceptSheet && Boolean(msId || getVal(statusIdx) || getVal(dateIdx))) ||
+      Boolean(msId && (getVal(sourceIdx) || getVal(statusIdx) || getVal(dateIdx)));
 
-    if (explicitDocId) {
-      currentDocId = explicitDocId;
-      currentManuscriptId = getVal(manuscriptIdIdx);
+    if (isNewDoc) {
+      currentDocId = explicitDocId || msId || `DOC-${currentSource}-${rIdx}`;
+      currentManuscriptId = msId;
       currentJournalName = getVal(journalIdx);
-      currentDocTitle = getVal(docTitleIdx) || currentJournalName || `Screened Document ${explicitDocId}`;
+      currentDocTitle = getVal(docTitleIdx) || currentJournalName || (msId ? `Manuscript ${msId}` : `Screened Document ${currentDocId}`);
       currentDocType = getVal(docTypeIdx) || 'Article';
       if (getVal(sourceIdx)) {
         currentSource = normalizeSource(getVal(sourceIdx));
+      } else if (isPaperceptSheet) {
+        currentSource = 'PAPERCEPT';
       }
       if (getVal(statusIdx)) {
         currentStatus = normalizeStatus(getVal(statusIdx));
+      } else {
+        currentStatus = 'Red';
       }
       if (getVal(dateIdx)) {
         currentDecisionDate = normalizeDecisionDate(getVal(dateIdx));
@@ -311,7 +371,7 @@ export function parseSanctionsTableRows(
       isCoAuthorsSection = false;
     } else {
       if (!currentDocId) {
-        currentDocId = `DOC-XLS-${rowId}`;
+        currentDocId = explicitDocId || msId || `DOC-XLS-${rowId}`;
         currentDocTitle = `Screened Document ${currentDocId}`;
       }
     }
@@ -346,7 +406,9 @@ export function parseSanctionsTableRows(
     const rawCountry = getVal(countryIdx).replace(/^\[|\]$/g, '').trim();
     const country = normalizeCountry(rawCountry || affilObj.country || '');
     const city = cleanText(affilObj.city) || 'N/A';
+    const parsedOrg = parseAffiliationOrganization(rawAffil);
     const organization =
+      parsedOrg ||
       cleanText(affilObj.organisationName) ||
       cleanText(affilObj.organisationDivision) ||
       'Unspecified Affiliation';
@@ -357,15 +419,17 @@ export function parseSanctionsTableRows(
     const pclHits = safeJsonParse<RawMatchHit[]>(getVal(pclScoreIdx), []);
 
     const matchedTerms: ScreeningCategory[] = [];
-    if (/pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
-    if (/pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
-    if (/sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
-    if (matchedTerms.length === 0) {
-      const parsed = parseMatchedTerms(rawReason);
-      if (parsed.length > 0) {
-        matchedTerms.push(...parsed);
-      } else if (!isCoAuthorsSection) {
-        matchedTerms.push('PAL');
+    if (!isCoAuthorsSection) {
+      if (/pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
+      if (/pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
+      if (/sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
+      if (matchedTerms.length === 0) {
+        const parsed = parseMatchedTerms(rawReason);
+        if (parsed.length > 0) {
+          matchedTerms.push(...parsed);
+        } else {
+          matchedTerms.push('PAL');
+        }
       }
     }
 
@@ -376,10 +440,10 @@ export function parseSanctionsTableRows(
         : 'PAL';
 
     const rowStatusRaw = getVal(statusIdx);
-    const rowStatus: ComplianceStatus = rowStatusRaw
-      ? normalizeStatus(rowStatusRaw)
-      : isCoAuthorsSection
-        ? 'Green'
+    const rowStatus: ComplianceStatus = isCoAuthorsSection
+      ? 'Green'
+      : rowStatusRaw
+        ? normalizeStatus(rowStatusRaw)
         : currentStatus;
 
     let reasonText = rawReason;
@@ -448,6 +512,7 @@ export function parseSanctionsTableRows(
       batchId,
       sourceFileName: fileName,
       matchedWatchlist: matchedTerms.join(' | '),
+      isCoAuthor: isCoAuthorsSection,
     });
   }
 
@@ -489,7 +554,7 @@ export async function parseSanctionsExcelWorkbook(
       defval: '',
     });
     const stringRows = rows.map((r) => r.map((cell) => String(cell ?? '')));
-    const parsed = parseSanctionsTableRows(stringRows, batchId, fileName);
+    const parsed = parseSanctionsTableRows(stringRows, batchId, fileName, sheetName);
     if (parsed.length > 0) {
       allRecords.push(...parsed);
     }

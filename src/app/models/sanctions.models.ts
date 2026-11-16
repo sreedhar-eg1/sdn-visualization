@@ -54,6 +54,28 @@ export interface SanctionsRecord {
   documentType?: string;
   matchedEntitySummary?: string;
   affiliationsRaw?: string;
+  isCoAuthor?: boolean;
+}
+
+export interface JournalAppearanceTrend {
+  journalName: string;
+  count: number;
+  redCount: number;
+}
+
+export interface PclCountryTrend {
+  country: string;
+  count: number;
+  redCount: number;
+}
+
+export interface RepeatedlySanctionedAuthor {
+  authorName: string;
+  repeatCount: number;
+  sources: ScreeningSource[];
+  reasons: string[];
+  organization?: string;
+  country: string;
 }
 
 export interface UploadedFileBatch {
