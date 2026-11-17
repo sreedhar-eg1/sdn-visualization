@@ -91,7 +91,7 @@ export class DashboardComponent {
     label: string;
     value: ScreeningSource | 'ALL';
   }> = [
-    { label: 'All Platforms', value: 'ALL' },
+    { label: 'All Data Source', value: 'ALL' },
     { label: 'S1M', value: 'S1M' },
     { label: 'IDAMS', value: 'IDAMS' },
     { label: 'PAPERCEPT', value: 'PAPERCEPT' },
