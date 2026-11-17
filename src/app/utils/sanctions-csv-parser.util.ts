@@ -135,10 +135,13 @@ function normalizeDecisionDate(raw: string): string {
   if (cleaned) {
     const parsed = new Date(cleaned);
     if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString().slice(0, 10);
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, '0');
+      const d = String(parsed.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
   }
-  return new Date().toISOString().slice(0, 10);
+  return '';
 }
 
 export function parseAffiliationOrganization(rawAffil: string | undefined): string | null {
@@ -343,7 +346,7 @@ export function parseSanctionsTableRows(
       getVal(authorNameIdx) ||
       `${getVal(authorFirstIdx)} ${getVal(authorLastIdx)}`.trim();
 
-    if (/^co-?authors?$/i.test(rawAuthor)) {
+    if (/^co-?authors?$/i.test(rawAuthor) && !getVal(reasonIdx) && !getVal(statusIdx)) {
       continue;
     }
 
@@ -352,15 +355,16 @@ export function parseSanctionsTableRows(
     const rowId = getVal(idIdx) || String(rIdx);
     const isNewDoc =
       Boolean(explicitDocId) ||
-      (isPaperceptSheet && Boolean(msId || getVal(statusIdx) || getVal(dateIdx))) ||
-      Boolean(msId && (getVal(sourceIdx) || getVal(statusIdx) || getVal(dateIdx)));
+      Boolean(msId) ||
+      (isPaperceptSheet && Boolean(getVal(statusIdx) || getVal(dateIdx))) ||
+      Boolean(getVal(sourceIdx) || getVal(statusIdx) || getVal(dateIdx));
 
-    if (isNewDoc) {
-      currentDocId = explicitDocId || msId || `DOC-${currentSource}-${rIdx}`;
-      currentManuscriptId = msId;
-      currentJournalName = getVal(journalIdx);
+    if (isNewDoc || !currentDocId) {
+      currentDocId = explicitDocId || msId || currentDocId || `DOC-${currentSource}-${rIdx}`;
+      currentManuscriptId = msId || currentManuscriptId;
+      currentJournalName = getVal(journalIdx) || currentJournalName;
       currentDocTitle = getVal(docTitleIdx) || currentJournalName || (msId ? `Manuscript ${msId}` : `Screened Document ${currentDocId}`);
-      currentDocType = getVal(docTypeIdx) || 'Article';
+      currentDocType = getVal(docTypeIdx) || currentDocType || 'Article';
       if (getVal(sourceIdx)) {
         currentSource = normalizeSource(getVal(sourceIdx));
       } else if (isPaperceptSheet) {
@@ -372,18 +376,9 @@ export function parseSanctionsTableRows(
         currentStatus = 'Red';
       }
       if (getVal(dateIdx)) {
-        currentDecisionDate = normalizeDecisionDate(getVal(dateIdx));
+        currentDecisionDate = normalizeDecisionDate(getVal(dateIdx)) || currentDecisionDate;
       }
       isCoAuthorsSection = false;
-    } else {
-      if (!currentDocId) {
-        currentDocId = explicitDocId || msId || `DOC-XLS-${rowId}`;
-        currentDocTitle = `Screened Document ${currentDocId}`;
-      }
-    }
-
-    if (!rawAuthor && !getVal(emailIdx) && !getVal(reasonIdx)) {
-      continue;
     }
 
     const authorName = rawAuthor || 'Unknown Author';
@@ -420,10 +415,15 @@ export function parseSanctionsTableRows(
       'Unspecified Affiliation';
 
     const rawReason = getVal(reasonIdx).trim();
+    const upperReason = rawReason.toUpperCase();
     let exactReason = rawReason;
-    if (/^pal$/i.test(rawReason)) exactReason = 'PAL';
-    else if (/^pcl$/i.test(rawReason)) exactReason = 'PCL';
-    else if (/^sdn$/i.test(rawReason)) exactReason = 'SDN';
+    if (upperReason === 'PAL' || /^\s*PAL\s*$/i.test(rawReason)) {
+      exactReason = 'PAL';
+    } else if (upperReason === 'PCL' || /^\s*PCL\s*$/i.test(rawReason)) {
+      exactReason = 'PCL';
+    } else if (upperReason === 'SDN' || /^\s*SDN\s*$/i.test(rawReason)) {
+      exactReason = 'SDN';
+    }
 
     const palHits = safeJsonParse<RawMatchHit[]>(getVal(palScoreIdx), []);
     const sdnHits = safeJsonParse<RawMatchHit[]>(getVal(sdnScoreIdx), []);

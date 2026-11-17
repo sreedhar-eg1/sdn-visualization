@@ -121,7 +121,7 @@ export class DashboardComponent {
       if (platform !== 'ALL' && record.source.toUpperCase() !== platform.toUpperCase()) {
         return false;
       }
-      // Reason filter (exact string match PAL or PCL)
+      // Reason filter (matches PAL or PCL with trim and trailing space safety)
       if (reason !== 'ALL') {
         const recReason = (record.reason || '').trim().toUpperCase();
         if (reason === 'PAL' && recReason !== 'PAL' && record.category !== 'PAL') {
@@ -132,7 +132,7 @@ export class DashboardComponent {
         }
       }
       // Date range filter
-      if (preset !== 'ALL_DATES') {
+      if (preset !== 'ALL_DATES' && record.decisionDate) {
         if (start && record.decisionDate < start) {
           return false;
         }
@@ -394,14 +394,16 @@ export class DashboardComponent {
     const totalFlaggedEvents = recs.length;
 
     // 2. PAL Alerts (Count of records where Reason is PAL)
-    const palAlerts = recs.filter(
-      (r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL'
-    ).length;
+    const palAlerts = recs.filter((r) => {
+      const recReason = (r.reason || '').trim().toUpperCase();
+      return recReason === 'PAL' || r.category === 'PAL';
+    }).length;
 
     // 3. PCL Alerts (Count of records where Reason is PCL)
-    const pclAlerts = recs.filter(
-      (r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL'
-    ).length;
+    const pclAlerts = recs.filter((r) => {
+      const recReason = (r.reason || '').trim().toUpperCase();
+      return recReason === 'PCL' || r.category === 'PCL';
+    }).length;
 
     // 4. Unique Flagged Authors (Count of unique email addresses from filtered records, converted to lowercase)
     const emailSet = new Set<string>();
@@ -601,12 +603,14 @@ export class DashboardComponent {
   // 2. Screening Reason Distribution: simple donut or pie chart showing PAL vs PCL split
   protected readonly reasonDistributionChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
-    const palCount = recs.filter(
-      (r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL'
-    ).length;
-    const pclCount = recs.filter(
-      (r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL'
-    ).length;
+    const palCount = recs.filter((r) => {
+      const recReason = (r.reason || '').trim().toUpperCase();
+      return recReason === 'PAL' || r.category === 'PAL';
+    }).length;
+    const pclCount = recs.filter((r) => {
+      const recReason = (r.reason || '').trim().toUpperCase();
+      return recReason === 'PCL' || r.category === 'PCL';
+    }).length;
 
     return {
       chart: { type: 'pie', height: 320, backgroundColor: 'transparent' },

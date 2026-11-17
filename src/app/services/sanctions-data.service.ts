@@ -545,13 +545,14 @@ export class SanctionsDataService {
   }
 
   private recordSignature(r: SanctionsRecord): string {
+    const rowKey = (r.id || '').replace(/^batch-\d+-\d+-/, '');
     return [
+      r.sourceFileName || 'file',
+      rowKey,
       r.documentId,
-      r.authorName.trim().toLowerCase(),
-      r.decisionDate,
+      r.authorId || r.authorName.trim().toLowerCase(),
+      r.reason,
       r.source,
-      r.matchedWatchlist,
-      r.status,
     ].join('::');
   }
 
@@ -567,11 +568,13 @@ export class SanctionsDataService {
     const existing = this.uploadedExcelRecords();
     const existingSigs = new Set(existing.map((r) => this.recordSignature(r)));
     const newRecords: SanctionsRecord[] = [];
+    let skippedDuplicates = 0;
 
     for (const rec of parsed) {
       const sig = this.recordSignature(rec);
-      if (!existingSigs.has(sig)) {
-        existingSigs.add(sig);
+      if (existingSigs.has(sig)) {
+        skippedDuplicates++;
+      } else {
         newRecords.push(rec);
       }
     }

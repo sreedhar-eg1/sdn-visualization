@@ -297,4 +297,44 @@ describe('DashboardComponent', () => {
     expect(palKpi.palAlerts).toBe(3);
     expect(palKpi.pclAlerts).toBe(0);
   });
+
+  it('should not drop same-day repeat screening events at the event level while preserving author deduplication', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dataService = TestBed.inject(SanctionsDataService);
+    dataService.clearUploadedFiles();
+
+    // Workbook containing repeated screening runs for the same document and author on the same day
+    const wb = XLSX.utils.book_new();
+    const rows = [
+      ['Document_Id', 'Manuscript_Id', 'Status', 'Decision_Date', 'Journal_Name', 'Document_Source', 'Reason', 'Author_Name', 'Email', 'Author_Id', 'Pal_Id', 'Country', 'Affiliations'],
+      // Event 1: S1M run 1 at 18:42
+      ['DOC-REPEAT-1', 'MS-101', 'RED', 'Mon Nov 17 18:42:42 IST 2025', 'Journal X', 'S1M', 'PAL ', 'Dr. Repeat Author', 'repeat@example.com', 'A1', 'P1', 'Egypt', ''],
+      // Event 2: S1M run 2 at 18:43 (same day, same author, same doc - separate screening event)
+      ['DOC-REPEAT-1', 'MS-101', 'RED', 'Mon Nov 17 18:43:03 IST 2025', 'Journal X', 'S1M', 'PAL', 'Dr. Repeat Author', 'repeat@example.com', 'A1', 'P1', 'Egypt', ''],
+      // Event 3: PCL event with trailing space
+      ['DOC-REPEAT-2', 'MS-102', 'RED', 'Mon Dec 08 19:17:38 IST 2025', 'Journal Y', 'IDAMS', 'PCL ', 'Author Vetoshko', 'vet@example.com', '129160073', '', '[Venezuela]', ''],
+      // Event 4: PCL event second revision (different author ID, same author name)
+      ['DOC-REPEAT-2', 'MS-102', 'RED', 'Mon Dec 08 19:17:41 IST 2025', 'Journal Y', 'IDAMS', 'PCL', 'Author Vetoshko', 'vet@example.com', '129160948', '', '[Venezuela]', ''],
+      // Event 5: Row with blank Document_Id, blank Date, but valid Document_Source
+      ['', 'MS-103', 'RED', '', 'Journal Z', 'Papercept', 'PAL', 'Author Minimal', 'min@example.com', '', '', '', ''],
+    ];
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'ScreeningSheet');
+    const buffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+
+    await dataService.importUploadedExcel(buffer, 'RepeatEventsReport.xlsx');
+    dataService.datasetMode.set('UPLOADED_ONLY');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const comp = fixture.componentInstance;
+    const kpi = comp['kpiStats']();
+
+    // All 5 events must be counted (0 dropped)
+    expect(kpi.totalFlaggedEvents).toBe(5);
+    expect(kpi.palAlerts).toBe(3); // Events 1, 2, 5
+    expect(kpi.pclAlerts).toBe(2); // Events 3, 4
+    // Author deduplication only at the email level (3 unique: repeat@, vet@, min@)
+    expect(kpi.uniqueFlaggedAuthors).toBe(3);
+  });
 });
