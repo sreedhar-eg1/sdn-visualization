@@ -109,10 +109,10 @@
       </div>
     } -->
 
-    <!-- Filter Inputs Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end mt-4">
+    <!-- Filter Inputs Grid (All 6 controls fit on a single balanced 12-column row on desktop) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end mt-4">
       <!-- Platform Dropdown -->
-      <div class="lg:col-span-3">
+      <div class="lg:col-span-2">
         <span class="mc-label" style="margin-top: 0">Data Source</span>
         <select
           id="sourceFilter"
@@ -180,12 +180,13 @@
         </div>
       </div>
 
-      <!-- Reset Button -->
-      <div class="lg:col-span-2 flex justify-end">
+      <!-- Reset Button (Aligned on the same row with exact height matching) -->
+      <div class="lg:col-span-2 flex items-end">
         <button
           type="button"
           (click)="resetFilters()"
-          class="mc-btn mc-btn-ghost mc-btn-sm w-full lg:w-auto"
+          class="mc-btn mc-btn-ghost w-full flex items-center justify-center whitespace-nowrap"
+          style="height: 46px; border-radius: var(--mc-r-md); padding: 10px 16px; font-size: 13.5px;"
         >
           Reset Filters
         </button>
@@ -374,13 +375,13 @@
       </div>
     </section>
 
-    <!-- New Analytics & Visualizations Section (4 Minimal Charts in 2x2 Grid) -->
+    <!-- New Analytics & Visualizations Section (2x2 Grid followed by Yearly Reason Trend positioned at the end) -->
     <section aria-label="Visualizations Setup" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Chart 1: Monthly sanctioned author -->
+      <!-- Chart 1: Total Monthly Flagged Events (Column/Bar Chart) -->
       <div class="mc-card p-5">
         <div class="w-full min-h-[340px]">
           <highcharts-chart
-            [options]="monthlyTrendChartOptions()"
+            [options]="monthlyTotalEventsChartOptions()"
             [oneToOne]="true"
             class="block w-full h-[340px]"
           />
@@ -414,6 +415,17 @@
         <div class="w-full min-h-[340px]">
           <highcharts-chart
             [options]="journalConcentrationChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[340px]"
+          />
+        </div>
+      </div>
+
+      <!-- Chart 5: Yearly Trend by Alert Reason (Multi-Line Chart positioned at the end) -->
+      <div class="mc-card p-5 lg:col-span-2">
+        <div class="w-full min-h-[340px]">
+          <highcharts-chart
+            [options]="yearlyReasonTrendChartOptions()"
             [oneToOne]="true"
             class="block w-full h-[340px]"
           />

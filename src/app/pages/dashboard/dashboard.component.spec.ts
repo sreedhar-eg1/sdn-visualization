@@ -62,8 +62,9 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Flagged Event Rate:');
     expect(text).toContain('Author Risk Ratio:');
 
-    // Verify 4 new analytics charts exist
-    expect(text).toContain('Monthly sanctioned author');
+    // Verify analytics charts exist
+    expect(text).toContain('Total Monthly Flagged Events');
+    expect(text).toContain('Yearly Trend by Alert Reason');
     expect(text).toContain('Top High-Risk Institutions');
     expect(text).toContain('Alert Reason by Country (100% Stacked)');
     expect(text).toContain('Journal Risk Concentration');
@@ -284,10 +285,29 @@ describe('DashboardComponent', () => {
     const journalData = (journalChart.series?.[0] as any)?.data as number[];
     expect(journalData[0]).toBe(2);
 
-    // 4. Monthly sanctioned author (Jan: 1, Feb: 1, Mar: 1, Apr: 1, May: 1, Jun: 1, Jul: 1, Aug-Dec: 0)
-    const monthlyChart = comp['monthlyTrendChartOptions']();
-    const monthlyData = (monthlyChart.series?.[0] as any)?.data as number[];
-    expect(monthlyData.slice(0, 7)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    // 4. Monthly Total Events (Bar) and Reason Breakdown Trend (Multi-Line: PAL, PCL, SDN)
+    const totalChart = comp['monthlyTotalEventsChartOptions']();
+    expect(totalChart.chart?.type).toBe('column');
+    expect(totalChart.title?.text).toBe('Total Monthly Flagged Events');
+    const totalData = (totalChart.series?.[0] as any)?.data as number[];
+    expect(totalData.slice(0, 7)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+
+    const reasonChart = comp['yearlyReasonTrendChartOptions']();
+    expect(reasonChart.series?.length).toBe(3);
+    const palSeries = reasonChart.series?.[0] as any;
+    const pclSeries = reasonChart.series?.[1] as any;
+    const sdnSeries = reasonChart.series?.[2] as any;
+
+    expect(palSeries.name).toBe('PAL Alerts');
+    expect(pclSeries.name).toBe('PCL Alerts');
+    expect(sdnSeries.name).toBe('SDN Alerts');
+
+    const palTotal = (palSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const pclTotal = (pclSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const sdnTotal = (sdnSeries.data as number[]).reduce((a, b) => a + b, 0);
+    expect(palTotal).toBe(3);
+    expect(pclTotal).toBe(4);
+    expect(sdnTotal).toBe(0);
 
     // 5. Dynamic Platform Filter: PAPERCEPT
     comp['selectedPlatform'].set('PAPERCEPT');
@@ -349,5 +369,52 @@ describe('DashboardComponent', () => {
     expect(kpi.pclAlerts).toBe(2); // Events 3, 4
     // Author deduplication only at the email level (3 unique: repeat@, vet@, min@)
     expect(kpi.uniqueFlaggedAuthors).toBe(3);
+  });
+
+  it('should render both Total Monthly Flagged Events (bar) and Yearly Trend by Alert Reason (multi-line) charts', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dataService = TestBed.inject(SanctionsDataService);
+    dataService.loadBuiltInSampleCsv();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const comp = fixture.componentInstance;
+    const kpi = comp['kpiStats']();
+
+    // 1. Verify Column Chart (Total Monthly Flagged Events)
+    const barChart = comp['monthlyTotalEventsChartOptions']();
+    expect(barChart.chart?.type).toBe('column');
+    expect(barChart.title?.text).toBe('Total Monthly Flagged Events');
+    const barTotal = (barChart.series?.[0] as any)?.data.reduce((a: number, b: number) => a + b, 0);
+    expect(barTotal).toBe(kpi.totalFlaggedEvents);
+
+    // 2. Verify Multi-Line / Spline Chart (Yearly Trend by Alert Reason)
+    const lineChart = comp['yearlyReasonTrendChartOptions']();
+    expect(lineChart.chart?.type).toBe('spline');
+    expect(lineChart.title?.text).toBe('Yearly Trend by Alert Reason');
+    expect(lineChart.legend?.enabled).toBe(true);
+    expect(lineChart.tooltip?.shared).toBe(true);
+
+    // Verify 3 distinct datasets
+    expect(lineChart.series?.length).toBe(3);
+    const [palSeries, pclSeries, sdnSeries] = lineChart.series as any[];
+
+    expect(palSeries.name).toBe('PAL Alerts');
+    expect(palSeries.color).toBe('#3C476A');
+
+    expect(pclSeries.name).toBe('PCL Alerts');
+    expect(pclSeries.color).toBe('#A86A1E');
+
+    expect(sdnSeries.name).toBe('SDN Alerts');
+    expect(sdnSeries.color).toBe('#4A6F56');
+
+    // Verify sum across years matches total events
+    const palTotal = (palSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const pclTotal = (pclSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const sdnTotal = (sdnSeries.data as number[]).reduce((a, b) => a + b, 0);
+
+    expect(palTotal).toBe(kpi.palAlerts);
+    expect(pclTotal).toBe(kpi.pclAlerts);
+    expect(sdnTotal).toBe(kpi.sdnAlerts);
   });
 });

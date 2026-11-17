@@ -656,8 +656,8 @@ export class DashboardComponent {
     });
   });
 
-  // 1. Monthly sanctioned author: bar or line chart showing total valid events grouped by month from Decision_Date
-  protected readonly monthlyTrendChartOptions = computed<Highcharts.Options>(() => {
+  // 1. Total Monthly Flagged Events (Vertical Column Chart)
+  protected readonly monthlyTotalEventsChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
     const MONTH_KEYS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthMap: Record<string, number> = {
@@ -668,23 +668,41 @@ export class DashboardComponent {
 
     for (const r of recs) {
       if (r.decisionDate) {
+        let monthIdx = -1;
         const match = r.decisionDate.match(/^\d{4}-(\d{2})/);
         if (match && monthMap[match[1]] !== undefined) {
-          counts[monthMap[match[1]]] += 1;
+          monthIdx = monthMap[match[1]];
+        } else {
+          const d = new Date(r.decisionDate);
+          if (!isNaN(d.getTime())) {
+            monthIdx = d.getMonth();
+          }
+        }
+        if (monthIdx >= 0 && monthIdx < 12) {
+          counts[monthIdx] += 1;
         }
       }
     }
 
     return {
-      chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
+      chart: { type: 'column', height: 340, backgroundColor: 'transparent' },
       title: {
-        text: 'Monthly sanctioned author',
+        text: 'Total Monthly Flagged Events',
         align: 'left',
         style: {
           fontFamily: "'Fraunces', serif",
           fontSize: '18px',
           fontWeight: '500',
           color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Total flagged events aggregated by decision month',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: 'rgba(72, 17, 17, 0.65)',
         },
       },
       credits: { enabled: false },
@@ -704,16 +722,25 @@ export class DashboardComponent {
         min: 0,
         allowDecimals: false,
         title: {
-          text: 'Events',
+          text: 'Event Count',
           style: { fontFamily: "'Inter', sans-serif", color: 'rgba(72, 17, 17, 0.65)', fontSize: '11px' },
         },
         gridLineColor: 'rgba(72, 17, 17, 0.08)',
       },
       legend: { enabled: false },
       tooltip: {
-        pointFormat: '<b>{point.y}</b> events in {point.key}',
+        useHTML: true,
+        headerFormat:
+          '<div style="font-family: Inter, sans-serif; font-size: 12px; font-weight: 700; color: #481111; margin-bottom: 4px; border-bottom: 1px solid rgba(72,17,17,0.12); padding-bottom: 4px;">{point.key}</div>',
+        pointFormat:
+          '<div style="font-family: Inter, sans-serif; font-size: 11px; padding: 2px 0;">' +
+          '<span style="color: #481111; font-weight: 600;">Total Flagged:</span> ' +
+          '<span style="font-weight: 700; color: #1D0E0A;">{point.y} events</span>' +
+          '</div>',
         backgroundColor: '#FFFFFF',
-        borderColor: 'rgba(72, 17, 17, 0.18)',
+        borderColor: 'rgba(72, 17, 17, 0.25)',
+        borderRadius: 8,
+        shadow: true,
         style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
       },
       plotOptions: {
@@ -729,12 +756,197 @@ export class DashboardComponent {
       series: [
         {
           type: 'column',
-          name: 'Events',
+          name: 'Total Flagged Events',
           data: counts,
         },
       ],
     };
   });
+
+  // 2. Yearly Trend by Alert Reason: multi-line chart showing trends for PAL, PCL, and SDN over years
+  protected readonly yearlyReasonTrendChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+
+    // Collect all distinct years from the filtered dataset
+    const foundYears = new Set<string>();
+    for (const r of recs) {
+      if (r.decisionDate) {
+        const match = r.decisionDate.match(/^(\d{4})/);
+        if (match) {
+          foundYears.add(match[1]);
+        }
+      }
+    }
+
+    // Build chronological year categories
+    let yearCategories: string[];
+    if (foundYears.size === 0) {
+      yearCategories = ['2024', '2025', '2026'];
+    } else if (foundYears.size === 1) {
+      const single = parseInt(Array.from(foundYears)[0], 10);
+      yearCategories = [String(single - 1), String(single), String(single + 1)];
+    } else {
+      const min = Math.min(...Array.from(foundYears).map((y) => parseInt(y, 10)));
+      const max = Math.max(...Array.from(foundYears).map((y) => parseInt(y, 10)));
+      yearCategories = [];
+      for (let y = min; y <= max; y++) {
+        yearCategories.push(String(y));
+      }
+    }
+
+    const yearIndexMap = new Map<string, number>();
+    yearCategories.forEach((yr, idx) => yearIndexMap.set(yr, idx));
+
+    const palCounts = new Array(yearCategories.length).fill(0);
+    const pclCounts = new Array(yearCategories.length).fill(0);
+    const sdnCounts = new Array(yearCategories.length).fill(0);
+
+    for (const r of recs) {
+      if (r.decisionDate) {
+        const match = r.decisionDate.match(/^(\d{4})/);
+        if (match && yearIndexMap.has(match[1])) {
+          const yIdx = yearIndexMap.get(match[1])!;
+          const recReason = (r.reason || '').trim().toUpperCase();
+          const category = (r.category || '').trim().toUpperCase();
+
+          if (recReason === 'PAL' || category === 'PAL' || recReason.startsWith('PAL')) {
+            palCounts[yIdx] += 1;
+          } else if (recReason === 'PCL' || category === 'PCL' || recReason.startsWith('PCL')) {
+            pclCounts[yIdx] += 1;
+          } else if (recReason === 'SDN' || category === 'SDN' || recReason.startsWith('SDN')) {
+            sdnCounts[yIdx] += 1;
+          } else {
+            if (recReason.includes('PAL')) {
+              palCounts[yIdx] += 1;
+            } else if (recReason.includes('PCL')) {
+              pclCounts[yIdx] += 1;
+            } else if (recReason.includes('SDN')) {
+              sdnCounts[yIdx] += 1;
+            } else {
+              palCounts[yIdx] += 1;
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      chart: { type: 'spline', height: 340, backgroundColor: 'transparent' },
+      title: {
+        text: 'Yearly Trend by Alert Reason',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#481111',
+        },
+      },
+      subtitle: {
+        text: 'Annual screening trajectory across PAL, PCL, and SDN alert pipelines',
+        align: 'left',
+        style: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: 'rgba(72, 17, 17, 0.65)',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories: yearCategories,
+        lineColor: 'rgba(72, 17, 17, 0.15)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'Event Count',
+          style: { fontFamily: "'Inter', sans-serif", color: 'rgba(72, 17, 17, 0.65)', fontSize: '11px' },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.08)',
+      },
+      legend: {
+        enabled: true,
+        align: 'center',
+        verticalAlign: 'bottom',
+        itemStyle: {
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+          color: '#481111',
+          fontWeight: '500',
+        },
+      },
+      tooltip: {
+        shared: true,
+        useHTML: true,
+        headerFormat:
+          '<div style="font-family: Inter, sans-serif; font-size: 12px; font-weight: 700; color: #481111; margin-bottom: 4px; border-bottom: 1px solid rgba(72,17,17,0.12); padding-bottom: 4px;">Year: {point.key}</div>',
+        pointFormat:
+          '<div style="font-family: Inter, sans-serif; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 0;">' +
+          '<span style="color: {point.color}; font-weight: 600;">\u25CF {series.name}:</span> ' +
+          '<span style="font-weight: 700; color: #1D0E0A;">{point.y} events</span>' +
+          '</div>',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.25)',
+        borderRadius: 8,
+        shadow: true,
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        spline: {
+          lineWidth: 2.5,
+          marker: {
+            enabled: true,
+            radius: 4,
+          },
+        },
+      },
+      series: [
+        {
+          type: 'spline',
+          name: 'PAL Alerts',
+          data: palCounts,
+          color: '#3C476A',
+          marker: {
+            symbol: 'circle',
+            radius: 4,
+          },
+        },
+        {
+          type: 'spline',
+          name: 'PCL Alerts',
+          data: pclCounts,
+          color: '#A86A1E',
+          marker: {
+            symbol: 'diamond',
+            radius: 4,
+          },
+        },
+        {
+          type: 'spline',
+          name: 'SDN Alerts',
+          data: sdnCounts,
+          color: '#4A6F56',
+          marker: {
+            symbol: 'square',
+            radius: 4,
+          },
+        },
+      ],
+    };
+  });
+
+  // Backward compatibility aliases
+  protected readonly monthlyReasonTrendChartOptions = this.yearlyReasonTrendChartOptions;
+  protected readonly monthlyTrendChartOptions = this.monthlyTotalEventsChartOptions;
 
   // 2. Top High-Risk Institutions (Horizontal Bar Chart)
   protected readonly institutionsChartOptions = computed<Highcharts.Options>(() => {

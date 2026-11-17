@@ -568,15 +568,15 @@
     </div>
   </section>
 
-  <!-- Analytics Charts (2x2 Grid) -->
+  <!-- Analytics Charts (Grid) -->
   <section class="analytics-grid">
-    <!-- Chart 1: Monthly Flagged-Event Trend -->
+    <!-- Chart 1: Total Monthly Flagged Events (Bar Chart) -->
     <div class="chart-card">
       <div class="chart-header">
-        <h3 class="chart-title">Monthly Flagged-Event Trend</h3>
+        <h3 class="chart-title">Total Monthly Flagged Events</h3>
       </div>
       <div class="chart-wrap">
-        <canvas id="monthlyTrendChart"></canvas>
+        <canvas id="monthlyTotalChart"></canvas>
       </div>
     </div>
 
@@ -607,6 +607,16 @@
       </div>
       <div class="chart-wrap">
         <canvas id="journalConcentrationChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 5: Yearly Trend by Alert Reason (Multi-Line Chart positioned at the end) -->
+    <div class="chart-card" style="grid-column: 1 / -1;">
+      <div class="chart-header">
+        <h3 class="chart-title">Yearly Trend by Alert Reason</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="yearlyReasonChart"></canvas>
       </div>
     </div>
   </section>
@@ -961,14 +971,15 @@
   // SECTION 2: NEW ADVANCED ANALYTICS SECTION
   // ==========================================
   function renderAdvancedAnalytics(events) {
-    renderMonthlyChart(events);
+    renderMonthlyTotalChart(events);
     renderInstitutionsChart(events);
     renderCountryStackedChart(events);
     renderJournalChart(events);
+    renderYearlyReasonChart(events);
   }
 
-  // Monthly Flagged-Event Trend (Bar/Line Chart)
-  function renderMonthlyChart(events) {
+  // Chart 1: Total Monthly Flagged Events (Vertical Column/Bar Chart)
+  function renderMonthlyTotalChart(events) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const counts = new Array(12).fill(0);
 
@@ -979,27 +990,192 @@
       }
     });
 
-    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
-    if (chartInstances.monthly) chartInstances.monthly.destroy();
+    const canvas = document.getElementById('monthlyTotalChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (chartInstances.monthlyTotal) chartInstances.monthlyTotal.destroy();
 
-    chartInstances.monthly = new Chart(ctx, {
+    chartInstances.monthlyTotal = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: months,
         datasets: [{
-          label: 'Flagged Events',
+          label: 'Total Flagged Events',
           data: counts,
-          backgroundColor: '#8B263E',
+          backgroundColor: '#3C476A',
           borderRadius: 4
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` Total: ${context.parsed.y} flagged events`;
+              }
+            }
+          }
+        },
         scales: {
-          y: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1, precision: 0 },
+            grid: { color: 'rgba(72,17,17,0.06)' },
+            title: {
+              display: true,
+              text: 'Event Count',
+              font: { family: 'Inter', size: 11 },
+              color: 'rgba(72,17,17,0.65)'
+            }
+          },
           x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Chart 5: Yearly Trend by Alert Reason (Multi-Line Chart for PAL, PCL, and SDN by Year)
+  function renderYearlyReasonChart(events) {
+    const foundYears = new Set();
+    events.forEach(r => {
+      if (r.decisionDate && r.decisionDate.length >= 4) {
+        const y = r.decisionDate.substring(0, 4);
+        if (/^\d{4}$/.test(y)) foundYears.add(y);
+      }
+    });
+
+    let years = [];
+    if (foundYears.size === 0) {
+      years = ['2024', '2025', '2026'];
+    } else if (foundYears.size === 1) {
+      const single = parseInt(Array.from(foundYears)[0], 10);
+      years = [String(single - 1), String(single), String(single + 1)];
+    } else {
+      const min = Math.min(...Array.from(foundYears).map(y => parseInt(y, 10)));
+      const max = Math.max(...Array.from(foundYears).map(y => parseInt(y, 10)));
+      for (let y = min; y <= max; y++) years.push(String(y));
+    }
+
+    const yearIdxMap = new Map();
+    years.forEach((yr, idx) => yearIdxMap.set(yr, idx));
+
+    const palCounts = new Array(years.length).fill(0);
+    const pclCounts = new Array(years.length).fill(0);
+    const sdnCounts = new Array(years.length).fill(0);
+
+    events.forEach(r => {
+      if (r.decisionDate && r.decisionDate.length >= 4) {
+        const y = r.decisionDate.substring(0, 4);
+        if (yearIdxMap.has(y)) {
+          const idx = yearIdxMap.get(y);
+          const reason = (r.reason || '').trim().toUpperCase();
+          const category = (r.category || '').trim().toUpperCase();
+          if (reason === 'PAL' || category === 'PAL' || reason.startsWith('PAL')) {
+            palCounts[idx]++;
+          } else if (reason === 'PCL' || category === 'PCL' || reason.startsWith('PCL')) {
+            pclCounts[idx]++;
+          } else if (reason === 'SDN' || category === 'SDN' || reason.startsWith('SDN')) {
+            sdnCounts[idx]++;
+          } else {
+            if (reason.includes('PAL')) palCounts[idx]++;
+            else if (reason.includes('PCL')) pclCounts[idx]++;
+            else if (reason.includes('SDN')) sdnCounts[idx]++;
+            else palCounts[idx]++;
+          }
+        }
+      }
+    });
+
+    const canvas = document.getElementById('yearlyReasonChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (chartInstances.yearlyReason) chartInstances.yearlyReason.destroy();
+
+    chartInstances.yearlyReason = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          {
+            label: 'PAL Alerts',
+            data: palCounts,
+            borderColor: '#3C476A',
+            backgroundColor: 'rgba(60, 71, 106, 0.1)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: false
+          },
+          {
+            label: 'PCL Alerts',
+            data: pclCounts,
+            borderColor: '#A86A1E',
+            backgroundColor: 'rgba(168, 106, 30, 0.1)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: false
+          },
+          {
+            label: 'SDN Alerts',
+            data: sdnCounts,
+            borderColor: '#4A6F56',
+            backgroundColor: 'rgba(74, 111, 86, 0.1)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              font: { family: 'Inter', size: 12 },
+              color: '#481111'
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              title: function(items) {
+                return items.length > 0 ? `Year: ${items[0].label}` : '';
+              },
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y} events`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1, precision: 0 },
+            grid: { color: 'rgba(72,17,17,0.06)' },
+            title: {
+              display: true,
+              text: 'Event Count',
+              font: { family: 'Inter', size: 11 },
+              color: 'rgba(72,17,17,0.65)'
+            }
+          },
+          x: {
+            grid: { display: false }
+          }
         }
       }
     });
