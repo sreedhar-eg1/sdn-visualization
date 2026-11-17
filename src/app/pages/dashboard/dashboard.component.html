@@ -13,8 +13,8 @@
     <!-- Dataset Mode & Multi-File Upload Strip -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4" style="border-bottom: 1px solid var(--mc-line)">
       <div class="flex items-center gap-3 flex-wrap">
-        <span class="mc-eyebrow">Dataset:</span>
-        <div class="mc-chips" role="group" aria-label="Dataset Mode">
+        <span class="mc-eyebrow">Santioned Report:</span>
+        <!-- <div class="mc-chips" role="group" aria-label="Dataset Mode">
           <button
             type="button"
             (click)="setDatasetMode('UPLOADED_ONLY')"
@@ -44,7 +44,7 @@
           >
             Mock JSON (On Hold: {{ dataService.mockRecords().length }})
           </button>
-        </div>
+        </div> -->
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
@@ -74,10 +74,10 @@
     </div>
 
     <!-- Uploaded Files Chips + Merge Status -->
-    @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
+    <!-- @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
       <div class="mc-tile mt-3 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="mc-eyebrow">Merged Files ({{ dataService.uploadedFiles().length }}):</span>
+          <span class="mc-eyebrow">Santioned Report</span>
           @for (file of dataService.uploadedFiles(); track file.id) {
             <span class="mc-tag neutral flex items-center gap-1.5">
               <span class="font-semibold">{{ file.fileName }}</span>
@@ -107,7 +107,7 @@
           <span class="mc-tag ok">{{ msg }}</span>
         }
       </div>
-    }
+    } -->
 
     <!-- Filter Inputs Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end mt-4">
@@ -243,7 +243,7 @@
 
   @if (dataService.records().length === 0) {
     <!-- Empty / Upload-First State -->
-    <section
+    <!-- <section
       aria-label="Upload Screening Data"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave($event)"
@@ -308,7 +308,7 @@
           </button>
         </div>
       </div>
-    </section>
+    </section> -->
   } @else {
     <!-- Top-Level Stats (Clean minimal row of exactly 4 stat cards: Title and absolute Count only) -->
     <section aria-label="Top-Level Stats" class="space-y-3">

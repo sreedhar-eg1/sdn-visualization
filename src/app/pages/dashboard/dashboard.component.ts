@@ -96,7 +96,7 @@ export class DashboardComponent {
     label: string;
     value: DateRangePreset;
   }> = [
-    { label: 'All Dates (Mock + Excel)', value: 'ALL_DATES' },
+    { label: 'All Dates', value: 'ALL_DATES' },
     { label: 'Last Quarter', value: 'LAST_QUARTER' },
     { label: 'Last 30 Days', value: 'LAST_30_DAYS' },
     { label: 'Last 7 Days', value: 'LAST_7_DAYS' },
