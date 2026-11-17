@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SanctionsDataService } from '../../services/sanctions-data.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -17,34 +18,55 @@ import { SanctionsDataService } from '../../services/sanctions-data.service';
         </a>
       </div>
 
-      <!-- Navigation -->
-      <nav class="mc-nav" aria-label="Main Navigation">
-        <a
-          routerLink="/dashboard"
-          routerLinkActive="is-active"
-          [routerLinkActiveOptions]="{ exact: false }"
-        >
-          Dashboard
-        </a>
-        <a
-          routerLink="/admin"
-          routerLinkActive="is-active"
-        >
-          Admin Configuration
-        </a>
-      </nav>
+      <!-- Navigation (Visible when logged in) -->
+      @if (authService.isAuthenticated()) {
+        <nav class="mc-nav" aria-label="Main Navigation">
+          <a
+            routerLink="/dashboard"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: false }"
+          >
+            Dashboard
+          </a>
+          <a
+            routerLink="/admin"
+            routerLinkActive="is-active"
+          >
+            Admin Configuration
+          </a>
+        </nav>
+      }
 
-      <!-- Engine Status Badge -->
+      <!-- Right Controls: Engine Status Badge & Logout Button -->
       <div class="flex items-center gap-3">
-        <span class="mc-badge">
-          <span class="mc-dot"></span>
-          <span>{{ enabledSourceCount() }}/{{ totalSourceCount() }} Sources Active</span>
-        </span>
+        @if (authService.isAuthenticated()) {
+          <span class="mc-badge">
+            <span class="mc-dot"></span>
+            <span>{{ enabledSourceCount() }}/{{ totalSourceCount() }} Sources Active</span>
+          </span>
+
+          <!-- Logout Button -->
+          <button
+            type="button"
+            (click)="logout()"
+            class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer"
+            title="Sign out of Sanctions Intelligence"
+          >
+            <span>Logout</span>
+            <span class="arr">&rarr;</span>
+          </button>
+        } @else {
+          <span class="mc-badge">
+            <span class="mc-dot"></span>
+            <span>Secure Surveillance Portal</span>
+          </span>
+        }
       </div>
     </header>
   `,
 })
 export class HeaderComponent {
+  protected readonly authService = inject(AuthService);
   private readonly dataService = inject(SanctionsDataService);
 
   protected readonly enabledSourceCount = computed(
@@ -53,4 +75,8 @@ export class HeaderComponent {
   protected readonly totalSourceCount = computed(
     () => this.dataService.watchlistSources().length
   );
+
+  logout(): void {
+    this.authService.logout();
+  }
 }
