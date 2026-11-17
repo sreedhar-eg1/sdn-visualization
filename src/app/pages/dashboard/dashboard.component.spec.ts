@@ -152,7 +152,7 @@ describe('DashboardComponent', () => {
 
     // Reset filters
     const resetBtn = Array.from(el.querySelectorAll('button')).find((b) =>
-      b.textContent?.trim() === 'Reset'
+      b.textContent?.includes('Reset')
     );
     resetBtn?.click();
     fixture.detectChanges();
@@ -160,34 +160,14 @@ describe('DashboardComponent', () => {
     expect(fixture.componentInstance['kpiStats']().totalFlaggedEvents).toBe(initialTotal);
   });
 
-  it('should render all report options in the reports dropdown', async () => {
+  it('should have decoupled reports from the main dashboard into the dedicated Reports route', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     await fixture.whenStable();
 
     const el = fixture.nativeElement as HTMLElement;
-    const reportsSelect = el.querySelector('#reportsFilter') as HTMLSelectElement;
-    expect(reportsSelect).toBeTruthy();
-
-    const optionValues = Array.from(reportsSelect.options).map((o) => o.value);
-    const expected = [
-      'ScreenedAuthor',
-      'SanctionedDocumentsDetails',
-      'BlockedArticle',
-      'JournalStats',
-      'DocumentHistory',
-      'AuthorsHistory',
-      'Document History',
-      'Authors History',
-    ];
-
-    expect(optionValues).toEqual(expected);
-
-    reportsSelect.value = 'SanctionedDocumentsDetails';
-    reportsSelect.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance['selectedReport']()).toBe('SanctionedDocumentsDetails');
+    const reportsSelect = el.querySelector('#reportsFilter');
+    expect(reportsSelect).toBeFalsy();
   });
 
   it('should enforce Base Filter by dropping rows with empty Document_Source and calculate exact metrics', async () => {

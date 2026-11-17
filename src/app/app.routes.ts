@@ -22,6 +22,13 @@ export const routes: Routes = [
       import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'reports',
+    title: 'Sanctions Intelligence | Reports & Export Hub',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/reports/reports.component').then((m) => m.ReportsComponent),
+  },
+  {
     path: 'admin',
     title: 'Sanctions Intelligence | Admin Configuration',
     canActivate: [authGuard],

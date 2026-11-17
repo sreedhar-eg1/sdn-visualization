@@ -193,9 +193,9 @@ export class DashboardComponent {
     return records;
   });
 
-  // Automated Trend Extraction based on uploaded Excel records & active reports
+  // Automated Trend Extraction based on uploaded Excel records & active filters
   protected readonly trendsSummary = computed<TrendsSummary>(() => {
-    const records = this.reportScopedRecords();
+    const records = this.filteredRecords();
     if (records.length === 0) {
       return {
         hasData: false,

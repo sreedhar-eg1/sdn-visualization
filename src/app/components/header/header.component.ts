@@ -29,6 +29,12 @@ import { AuthService } from '../../services/auth.service';
             Dashboard
           </a>
           <a
+            routerLink="/reports"
+            routerLinkActive="is-active"
+          >
+            Reports
+          </a>
+          <a
             routerLink="/admin"
             routerLinkActive="is-active"
           >

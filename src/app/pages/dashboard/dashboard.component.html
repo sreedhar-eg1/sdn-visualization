@@ -157,7 +157,7 @@
       </div>
 
       <!-- Start & End Date Inputs -->
-      <div class="lg:col-span-3 grid grid-cols-2 gap-2">
+      <div class="lg:col-span-4 grid grid-cols-2 gap-2">
         <div>
           <span class="mc-label" style="margin-top: 0">From</span>
           <input
@@ -180,65 +180,17 @@
         </div>
       </div>
 
-      <!-- Reports Dropdown -->
-      <div class="lg:col-span-1">
-        <span class="mc-label" style="margin-top: 0">Report</span>
-        <select
-          id="reportsFilter"
-          [ngModel]="selectedReport()"
-          (ngModelChange)="onReportChange($event)"
-          class="mc-select"
-        >
-          @for (rep of reportOptions; track rep.value) {
-            <option [value]="rep.value">{{ rep.label }}</option>
-          }
-        </select>
-      </div>
-
       <!-- Reset Button -->
-      <div class="lg:col-span-1 flex justify-end">
+      <div class="lg:col-span-2 flex justify-end">
         <button
           type="button"
           (click)="resetFilters()"
           class="mc-btn mc-btn-ghost mc-btn-sm w-full lg:w-auto"
         >
-          Reset
+          Reset Filters
         </button>
       </div>
     </div>
-
-    <!-- Contextual Report Strip -->
-    @if (selectedReport(); as rep) {
-      <div class="mc-tile mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-3">
-          <span class="mc-tag info">Report Focus</span>
-          <span class="mc-body text-sm">
-            Active view:
-            <strong class="font-semibold">{{ rep }}</strong>
-            ({{ filteredRecords().length }} records ready for export)
-          </span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            (click)="exportReportBriefExcel()"
-            class="mc-btn mc-btn-sm"
-          >
-            <span>Export {{ rep }} (Excel)</span>
-            <span class="arr">&rarr;</span>
-          </button>
-          <button
-            type="button"
-            (click)="exportReportBriefCsv()"
-            class="mc-btn mc-btn-ghost mc-btn-sm"
-            title="Export as CSV"
-          >
-            <span>CSV</span>
-          </button>
-        </div>
-      </div>
-    }
   </section>
 
   <!-- Top-Level Stats (Clean minimal row of exactly 5 stat cards: Title and absolute Count only) -->

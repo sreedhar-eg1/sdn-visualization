@@ -1,0 +1,363 @@
+<!-- Reports Page Head -->
+<section class="mc-page-head">
+  <span class="mc-eyebrow">— Surveillance &bull; Document Hub &bull; Compliance Exports</span>
+  <h1 class="mc-display">Reports &amp; Export Hub</h1>
+  <p class="mc-lead">
+    Decoupled compliance document center for exporting curated author registers, sanctioned document details, editorial blocked lists, and regional watchlist breakdowns.
+  </p>
+</section>
+
+<!-- Floating Toast Notification on Export -->
+@if (exportMessage()) {
+  <aside
+    class="fixed bottom-6 right-6 z-50 p-4 rounded-xl shadow-xl border bg-white flex items-center gap-3 animate-fade-in"
+    style="border-color: var(--mc-line); max-width: 420px;"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(72,17,17,0.08); color: var(--mc-oxblood)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <div class="flex-1 text-xs">
+      <div class="font-bold text-gray-900">Export Complete</div>
+      <div class="text-gray-600 mt-0.5 truncate">{{ exportMessage() }}</div>
+    </div>
+    <button
+      type="button"
+      (click)="exportMessage.set(null)"
+      class="text-gray-400 hover:text-gray-700 text-lg leading-none cursor-pointer p-1"
+      aria-label="Dismiss message"
+    >
+      &times;
+    </button>
+  </aside>
+}
+
+<div class="space-y-6">
+  <!-- Global Filter Controls for Reports -->
+  <section aria-label="Report Filtering" class="mc-card">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4" style="border-bottom: 1px solid var(--mc-line)">
+      <div>
+        <span class="mc-eyebrow text-xs uppercase tracking-wider block" style="color: var(--mc-oxblood-light)">
+          Active Surveillance Dataset
+        </span>
+        <div class="text-sm font-semibold mt-0.5" style="color: var(--mc-oxblood-dark)">
+          {{ filteredRecords().length }} total active records scoped for report generation
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          (click)="exportAllConsolidated()"
+          class="mc-btn mc-btn-sm"
+          title="Download master consolidated report across all platforms"
+        >
+          <span>Export All Records (Excel)</span>
+          <span class="arr">&rarr;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Inputs Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end mt-4">
+      <!-- Platform Dropdown -->
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Platform</span>
+        <select
+          id="reportPlatformFilter"
+          [ngModel]="selectedPlatform()"
+          (ngModelChange)="onPlatformChange($event)"
+          class="mc-select"
+        >
+          @for (platform of platformOptions; track platform.value) {
+            <option [value]="platform.value">{{ platform.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Reason Dropdown -->
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Reason</span>
+        <select
+          id="reportReasonFilter"
+          [ngModel]="selectedReason()"
+          (ngModelChange)="onReasonChange($event)"
+          class="mc-select"
+        >
+          @for (res of reasonOptions; track res.value) {
+            <option [value]="res.value">{{ res.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Date Range Preset -->
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Date Range</span>
+        <select
+          id="reportDatePreset"
+          [ngModel]="selectedPreset()"
+          (ngModelChange)="onPresetChange($event)"
+          class="mc-select"
+        >
+          @for (preset of datePresets; track preset.value) {
+            <option [value]="preset.value">{{ preset.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- From / To Inputs -->
+      <div class="lg:col-span-3 grid grid-cols-2 gap-2">
+        <div>
+          <span class="mc-label" style="margin-top: 0">From</span>
+          <input
+            id="reportStartDate"
+            type="date"
+            [ngModel]="startDate()"
+            (ngModelChange)="onCustomStartDate($event)"
+            class="mc-input"
+          />
+        </div>
+        <div>
+          <span class="mc-label" style="margin-top: 0">To</span>
+          <input
+            id="reportEndDate"
+            type="date"
+            [ngModel]="endDate()"
+            (ngModelChange)="onCustomEndDate($event)"
+            class="mc-input"
+          />
+        </div>
+      </div>
+
+      <!-- Search Reports -->
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Search Reports</span>
+        <input
+          id="searchReportsInput"
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Filter report cards..."
+          class="mc-input"
+        />
+      </div>
+
+      <!-- Reset Filters Button -->
+      <div class="lg:col-span-1 flex justify-end">
+        <button
+          type="button"
+          (click)="resetFilters()"
+          class="mc-btn mc-btn-ghost mc-btn-sm w-full lg:w-auto"
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Title -->
+  <div class="flex items-center justify-between pb-2 border-b" style="border-color: var(--mc-line)">
+    <div>
+      <h2 class="mc-h3 font-serif font-bold text-lg" style="color: var(--mc-oxblood-dark)">
+        Available Reports &amp; Export Formats
+      </h2>
+      <p class="text-xs text-gray-500 mt-0.5">
+        Select any report category to download in Excel (.xlsx) or CSV format with matching surveillance filters.
+      </p>
+    </div>
+    <span class="mc-tag neutral text-xs font-mono">
+      {{ displayedReports().length }} of {{ availableReports.length }} Reports
+    </span>
+  </div>
+
+  <!-- Reports Grid (2 columns on desktop) -->
+  <section aria-label="Available Reports Grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    @for (report of displayedReports(); track report.id) {
+      <div class="mc-card p-6 flex flex-col justify-between hover:shadow-md transition-all border rounded-xl bg-white" style="border-color: var(--mc-line)">
+        <!-- Top Metadata & Header -->
+        <div>
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <span
+              class="mc-tag text-xs font-semibold"
+              [class.info]="report.badgeClass === 'info'"
+              [class.bad]="report.badgeClass === 'bad'"
+              [class.warn]="report.badgeClass === 'warn'"
+              [class.neutral]="report.badgeClass === 'neutral'"
+            >
+              {{ report.badgeLabel }}
+            </span>
+            <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#FAF7F2] border border-[var(--mc-line)]" style="color: var(--mc-oxblood)">
+              {{ getReportRecordCount(report) }} records
+            </span>
+          </div>
+
+          <h3 class="mc-h3 text-lg font-serif font-bold mb-2" style="color: var(--mc-oxblood-dark)">
+            {{ report.title }}
+          </h3>
+
+          <p class="text-xs text-gray-600 leading-relaxed mb-3">
+            {{ report.description }}
+          </p>
+
+          <div class="text-[11px] font-mono text-gray-500 bg-[#FAF7F2] p-2 rounded border border-[var(--mc-line-light)]">
+            <span class="font-semibold text-gray-700">Scope:</span> {{ report.formatNotice }}
+          </div>
+        </div>
+
+        <!-- Action Bar at Bottom of Card -->
+        <div class="mt-5 pt-4 border-t border-[var(--mc-line)] flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <!-- Primary Excel Export -->
+            <button
+              type="button"
+              (click)="exportExcel(report)"
+              [disabled]="getReportRecordCount(report) === 0"
+              class="mc-btn mc-btn-sm cursor-pointer"
+              [title]="'Export ' + report.title + ' as Excel'"
+            >
+              <span>Export Excel</span>
+              <span class="arr">&rarr;</span>
+            </button>
+
+            <!-- CSV Export -->
+            <button
+              type="button"
+              (click)="exportCsv(report)"
+              [disabled]="getReportRecordCount(report) === 0"
+              class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer"
+              [title]="'Export ' + report.title + ' as CSV'"
+            >
+              <span>CSV</span>
+            </button>
+          </div>
+
+          <!-- Preview Records -->
+          <button
+            type="button"
+            (click)="openPreview(report)"
+            [disabled]="getReportRecordCount(report) === 0"
+            class="mc-link mc-small cursor-pointer text-xs"
+            [title]="'Preview records for ' + report.title"
+          >
+            Preview Records &hellip;
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+</div>
+
+<!-- Quick Record Preview Modal -->
+@if (previewReport(); as activeRep) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="activeRep.title + ' Preview'"
+  >
+    <div
+      class="mc-card max-w-4xl w-full max-h-[85vh] flex flex-col p-6 rounded-xl shadow-2xl bg-white border border-[var(--mc-line)]"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between pb-4 border-b border-[var(--mc-line)]">
+        <div>
+          <span class="mc-eyebrow text-xs uppercase tracking-wider block" style="color: var(--mc-oxblood-light)">
+            — Live Report Preview
+          </span>
+          <h2 class="mc-h3 font-serif font-bold text-xl mt-0.5" style="color: var(--mc-oxblood-dark)">
+            {{ activeRep.title }}
+          </h2>
+          <p class="text-xs text-gray-500 mt-1">
+            Displaying first 25 of {{ getReportRecordCount(activeRep) }} records matching current filters.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="closePreview()"
+          class="text-gray-400 hover:text-gray-700 text-2xl leading-none p-1 cursor-pointer"
+          aria-label="Close preview"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Modal Table Body -->
+      <div class="flex-1 overflow-y-auto mt-4 max-h-[55vh]">
+        <table class="mc-table w-full text-left text-xs">
+          <thead class="sticky top-0 bg-[#FAF7F2] z-10">
+            <tr>
+              <th>Doc ID</th>
+              <th>Platform</th>
+              <th>Reason</th>
+              <th>Author Name</th>
+              <th>Email</th>
+              <th>Country</th>
+              <th>Decision Date</th>
+              <th class="text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rec of getReportRecords(activeRep).slice(0, 25); track rec.id) {
+              <tr class="hover:bg-gray-50">
+                <td class="font-mono text-xs">{{ rec.documentId || '—' }}</td>
+                <td><span class="mc-tag neutral text-[10px]">{{ rec.source }}</span></td>
+                <td>
+                  <span
+                    class="mc-tag text-[10px]"
+                    [class.bad]="rec.reason === 'PAL' || rec.category === 'PAL'"
+                    [class.warn]="rec.reason === 'PCL' || rec.category === 'PCL'"
+                    [class.info]="rec.reason === 'SDN' || rec.category === 'SDN'"
+                  >
+                    {{ rec.reason || rec.category }}
+                  </span>
+                </td>
+                <td class="font-semibold">{{ rec.authorName }}</td>
+                <td class="font-mono text-[11px] text-gray-600">{{ rec.authorEmail || '—' }}</td>
+                <td>{{ rec.country || '—' }}</td>
+                <td class="font-mono text-[11px]">{{ rec.decisionDate }}</td>
+                <td class="text-right">
+                  <span
+                    class="mc-tag text-[10px]"
+                    [class.bad]="rec.status === 'Red'"
+                    [class.ok]="rec.status === 'Green'"
+                  >
+                    {{ rec.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-4 border-t border-[var(--mc-line)] flex items-center justify-between">
+        <span class="text-xs text-gray-500">
+          Ready for export: {{ getReportRecordCount(activeRep) }} total rows
+        </span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="exportExcel(activeRep)"
+            class="mc-btn mc-btn-sm"
+          >
+            <span>Download Excel</span>
+            <span class="arr">&rarr;</span>
+          </button>
+          <button
+            type="button"
+            (click)="closePreview()"
+            class="mc-btn mc-btn-ghost mc-btn-sm"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
