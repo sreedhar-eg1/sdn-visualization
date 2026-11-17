@@ -47,23 +47,38 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = el.textContent ?? '';
-    // Verify 4 clean stat cards exist
+    // Verify 4 clean stat cards exist (Title and absolute Count only)
     expect(text).toContain('Total Flagged Events');
     expect(text).toContain('PAL Alerts');
     expect(text).toContain('PCL Alerts');
     expect(text).toContain('Unique Flagged Authors');
 
-    // Verify 4 clean charts exist
-    expect(text).toContain('Monthly Flagged-Event Trend');
+    // Verify 3 restored visualizations exist
     expect(text).toContain('Screening Reason Distribution');
     expect(text).toContain('Events by Platform');
     expect(text).toContain('PCL Match by Country');
+
+    // Verify Contextual Callouts exist above charts
+    expect(text).toContain('Flagged Event Rate:');
+    expect(text).toContain('Author Risk Ratio:');
+
+    // Verify 4 new analytics charts exist
+    expect(text).toContain('Monthly Flagged-Event Trend');
+    expect(text).toContain('Top High-Risk Institutions');
+    expect(text).toContain('Alert Reason by Country (100% Stacked)');
+    expect(text).toContain('Journal Risk Concentration');
+    expect(text).toContain('Repeat Offender Leaderboard');
 
     const kpi = fixture.componentInstance['kpiStats']();
     expect(kpi.totalFlaggedEvents).toBe(23);
     expect(kpi.palAlerts).toBe(11);
     expect(kpi.pclAlerts).toBe(0);
-    expect(kpi.uniqueFlaggedAuthors).toBeGreaterThan(0);
+    expect(kpi.palVsPclAlerts).toBe('11 PAL / 0 PCL');
+    expect(kpi.flaggedEventRate).toContain('per 1,000 submissions');
+    expect(kpi.uniqueFlaggedAuthors).toBe(21);
+
+    const leaderboard = fixture.componentInstance['repeatOffenderLeaderboard']();
+    expect(leaderboard.length).toBeGreaterThan(0);
 
     // Clicking stat card opens modal
     const totalEventsBtn = Array.from(el.querySelectorAll('button')).find((b) =>
@@ -259,17 +274,18 @@ describe('DashboardComponent', () => {
     expect(kpi.pclAlerts).toBe(4); // 1 in S1M, 1 in IDAMS, 2 in PAPERCEPT
     expect(kpi.uniqueFlaggedAuthors).toBe(7);
 
-    // 2. Events by platform
-    const platformChart = comp['platformChartOptions']();
-    const platformData = (platformChart.series?.[0] as any)?.data as number[];
-    expect(platformData).toEqual([3, 2, 2]); // S1M: 3, IDAMS: 2, PAPERCEPT: 2
+    // 2. Alert Reason by Country (100% Stacked)
+    const countryChart = comp['alertReasonByCountryChartOptions']();
+    const countryCats = (countryChart.xAxis as any)?.categories as string[];
+    expect(countryCats).toContain('Venezuela');
+    expect(countryCats).toContain('Crimea');
 
-    // 3. PCL Country distribution (Venezuela: 2, Crimea: 1, North Korea: 1)
-    const pclCountryChart = comp['pclCountryChartOptions']();
-    const countryCats = (pclCountryChart.xAxis as any)?.categories as string[];
-    const countryData = (pclCountryChart.series?.[0] as any)?.data as number[];
-    expect(countryCats).toEqual(['Venezuela', 'Crimea', 'North Korea']);
-    expect(countryData).toEqual([2, 1, 1]);
+    // 3. Journal Risk Concentration (Top journal is Oceanic Eng with 2 events)
+    const journalChart = comp['journalConcentrationChartOptions']();
+    const journalCats = (journalChart.xAxis as any)?.categories as string[];
+    expect(journalCats[0]).toBe('Oceanic Eng');
+    const journalData = (journalChart.series?.[0] as any)?.data as number[];
+    expect(journalData[0]).toBe(2);
 
     // 4. Monthly flagged-event trend (Jan: 1, Feb: 1, Mar: 1, Apr: 1, May: 1, Jun: 1, Jul: 1, Aug-Dec: 0)
     const monthlyChart = comp['monthlyTrendChartOptions']();

@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanctions Intelligence Dashboard 2025</title>
+  <!-- Google Fonts: Inter & Fraunces -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (xlsx) for direct in-browser Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --mc-cream: #FAF7F2;
+      --mc-card: #FFFFFF;
+      --mc-oxblood: #481111;
+      --mc-oxblood-light: #8B263E;
+      --mc-oxblood-dark: #2B0707;
+      --mc-amber: #A86A1E;
+      --mc-navy: #3C476A;
+      --mc-line: rgba(72, 17, 17, 0.12);
+      --mc-line-light: rgba(72, 17, 17, 0.06);
+      --mc-text-main: #1D0E0A;
+      --mc-text-muted: rgba(29, 14, 10, 0.65);
+      --mc-radius: 12px;
+      --mc-shadow: 0 2px 10px -2px rgba(72, 17, 17, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--mc-cream);
+      color: var(--mc-text-main);
+      line-height: 1.5;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--mc-oxblood-light);
+    }
+    .main-title {
+      font-family: 'Fraunces', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--mc-oxblood-dark);
+      letter-spacing: -0.02em;
+    }
+
+    /* Filter Strip */
+    .controls-card {
+      background: var(--mc-card);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-radius);
+      padding: 16px 20px;
+      box-shadow: var(--mc-shadow);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .filters-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+    }
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-oxblood-light);
+    }
+    .filter-select {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 12px;
+      border: 1px solid var(--mc-line);
+      border-radius: 8px;
+      background: #FFFFFF;
+      color: var(--mc-text-main);
+      outline: none;
+      min-width: 150px;
+      cursor: pointer;
+    }
+    .filter-select:focus {
+      border-color: var(--mc-oxblood);
+    }
+    .actions-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--mc-oxblood);
+      color: #FFFFFF;
+    }
+    .btn-primary:hover {
+      background: var(--mc-oxblood-dark);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--mc-oxblood);
+      border: 1px solid var(--mc-line);
+    }
+    .btn-ghost:hover {
+      background: rgba(72, 17, 17, 0.04);
+    }
+    .status-bar {
+      font-size: 12px;
+      color: var(--mc-text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      width: 100%;
+      padding-top: 4px;
+    }
+
+    /* Top KPI Cards (4 Cards: Title and absolute Count only) */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .kpi-card {
+      background: var(--mc-card);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-radius);
+      padding: 20px 24px;
+      box-shadow: var(--mc-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .kpi-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--mc-oxblood-light);
+    }
+    .kpi-value {
+      font-family: 'Fraunces', serif;
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--mc-oxblood);
+      margin-top: 6px;
+      line-height: 1.1;
+    }
+
+    /* Section Headings */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--mc-line);
+      padding-bottom: 8px;
+      margin-top: 8px;
+    }
+    .section-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--mc-oxblood-dark);
+    }
+
+    /* Existing Restored Visualizations Grid (3 Cards) */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .overview-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Advanced Analytics 2x2 Grid */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .analytics-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--mc-card);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-radius);
+      padding: 18px 20px;
+      box-shadow: var(--mc-shadow);
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-header {
+      margin-bottom: 12px;
+    }
+    .chart-title {
+      font-family: 'Fraunces', serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--mc-oxblood-dark);
+    }
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 270px;
+    }
+
+    /* Contextual Callouts Banner */
+    .callout-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--mc-card);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-radius);
+      padding: 14px 22px;
+      box-shadow: var(--mc-shadow);
+    }
+    .callout-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .callout-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--mc-oxblood-light);
+    }
+    .callout-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--mc-oxblood-dark);
+      background: rgba(72, 17, 17, 0.05);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--mc-line-light);
+    }
+    .callout-divider {
+      width: 1px;
+      height: 22px;
+      background: var(--mc-line);
+    }
+    @media (max-width: 768px) {
+      .callout-divider { display: none; }
+    }
+
+    /* Repeat Offender Leaderboard Table */
+    .table-card {
+      background: var(--mc-card);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-radius);
+      padding: 20px;
+      box-shadow: var(--mc-shadow);
+    }
+    .table-container {
+      margin-top: 12px;
+      max-height: 340px;
+      overflow-y: auto;
+      border: 1px solid var(--mc-line-light);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    thead {
+      background: #FAF7F2;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    th {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-oxblood-light);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--mc-line-light);
+      color: var(--mc-text-main);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: rgba(72, 17, 17, 0.02);
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-pal {
+      background: rgba(60, 71, 106, 0.12);
+      color: var(--mc-navy);
+    }
+    .badge-pcl {
+      background: rgba(168, 106, 30, 0.12);
+      color: var(--mc-amber);
+    }
+    .badge-warn {
+      background: rgba(139, 38, 62, 0.15);
+      color: var(--mc-oxblood-light);
+      font-weight: 700;
+      margin-left: 6px;
+      font-size: 10px;
+      border: 1px solid rgba(139, 38, 62, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header class="header">
+    <span class="eyebrow">— Compliance Surveillance</span>
+    <h1 class="main-title">Sanctions Intelligence Dashboard 2025</h1>
+  </header>
+
+  <!-- Global Filter & File Import Strip -->
+  <section class="controls-card">
+    <div class="filters-group">
+      <div class="filter-item">
+        <label for="platformFilter" class="filter-label">Platform</label>
+        <select id="platformFilter" class="filter-select" onchange="applyFilters()">
+          <option value="ALL">All Platforms</option>
+          <option value="S1M">S1M (ScholarOne)</option>
+          <option value="IDAMS">IDAMS</option>
+          <option value="PAPERCEPT">PAPERCEPT</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label for="reasonFilter" class="filter-label">Reason</label>
+        <select id="reasonFilter" class="filter-select" onchange="applyFilters()">
+          <option value="ALL">All Reasons (PAL & PCL)</option>
+          <option value="PAL">PAL Only</option>
+          <option value="PCL">PCL Only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions-group">
+      <label class="btn btn-primary" style="cursor: pointer;">
+        <span>+ Import Excel (.xlsx)</span>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;">
+      </label>
+      <button type="button" class="btn btn-ghost" onclick="resetToBuiltIn()">Reset Default</button>
+    </div>
+
+    <div class="status-bar" id="statusMessage">
+      Showing 465 valid events (Base filter applied: non-empty platform)
+    </div>
+  </section>
+
+  <!-- Top KPI Cards (Clean minimal row of exactly 4 stat cards: Title and absolute Count only) -->
+  <section class="kpi-grid">
+    <!-- Card 1: Total Flagged Events -->
+    <div class="kpi-card">
+      <span class="kpi-title">Total Flagged Events</span>
+      <div class="kpi-value" id="kpiTotalEvents">465</div>
+    </div>
+
+    <!-- Card 2: PAL Alerts -->
+    <div class="kpi-card">
+      <span class="kpi-title">PAL Alerts</span>
+      <div class="kpi-value" id="kpiPalAlerts">340</div>
+    </div>
+
+    <!-- Card 3: PCL Alerts -->
+    <div class="kpi-card">
+      <span class="kpi-title">PCL Alerts</span>
+      <div class="kpi-value" id="kpiPclAlerts">125</div>
+    </div>
+
+    <!-- Card 4: Unique Flagged Authors -->
+    <div class="kpi-card">
+      <span class="kpi-title">Unique Flagged Authors</span>
+      <div class="kpi-value" id="kpiUniqueAuthors">208</div>
+    </div>
+  </section>
+
+  <!-- Section 1: Restored Existing Visualizations -->
+  <section class="section-header">
+    <h2 class="section-title">Screening Overview</h2>
+    <span class="eyebrow">Restored Core Visualizations</span>
+  </section>
+
+  <section class="overview-grid">
+    <!-- 1. Screening Reason Distribution (Donut Chart) -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Screening Reason Distribution</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="screeningReasonChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 2. Events by Platform (Vertical Bar Chart) -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Events by Platform</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="eventsByPlatformChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 3. PCL Match by Country (Horizontal Bar Chart) -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">PCL Match by Country</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="pclCountryChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: New Advanced Analytics Section -->
+  <section class="section-header">
+    <h2 class="section-title">Advanced Surveillance Analytics</h2>
+    <span class="eyebrow">Risk Trends & Exposure Metrics</span>
+  </section>
+
+  <!-- Contextual Callouts (Flagged Event Rate & Author Ratio) -->
+  <section class="callout-strip">
+    <div class="callout-item">
+      <span class="callout-label">Flagged Event Rate:</span>
+      <span class="callout-value" id="calloutEventRate">3.10 flagged events per 1,000 submissions</span>
+    </div>
+    <div class="callout-divider"></div>
+    <div class="callout-item">
+      <span class="callout-label">Author Risk Ratio:</span>
+      <span class="callout-value" id="calloutAuthorRatio">63.9% new authors</span>
+    </div>
+  </section>
+
+  <!-- Analytics Charts (2x2 Grid) -->
+  <section class="analytics-grid">
+    <!-- Chart 1: Monthly Flagged-Event Trend -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Monthly Flagged-Event Trend</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="monthlyTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 2: Top High-Risk Institutions -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Top High-Risk Institutions</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="institutionsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 3: Alert Reason by Country (100% Stacked) -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Alert Reason by Country (100% Stacked)</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="countryStackedChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 4: Journal Risk Concentration -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3 class="chart-title">Journal Risk Concentration</h3>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="journalConcentrationChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Repeat Offender Leaderboard -->
+  <section class="table-card">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <span class="eyebrow">— Repeat Compliance Watch</span>
+        <h3 class="chart-title" style="margin-top: 2px;">Repeat Offender Leaderboard</h3>
+      </div>
+      <div style="font-size: 12px; color: var(--mc-text-muted);" id="leaderboardCount">
+        Showing 75 authors with count > 1
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Author Name</th>
+            <th>Email</th>
+            <th>Event Count</th>
+            <th style="text-align: right;">Primary Reason</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <!-- Populated dynamically by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  // 1. Global Variable for Exposure Ratios
+  const TOTAL_SUBMISSIONS_SCREENED = 150000;
+
+  // Embedded default 2025 raw records (465 valid records from SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx)
+  const BUILTIN_DATASET = [{"documentId": "63195400", "source": "S1M", "reason": "PCL", "authorName": "Florian-Pacheco, Professor Wendy L.", "authorEmail": "wendy.florian@unisimon.edu.co", "country": "Venezuela", "journalName": "Engineering Management Review", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-12-30", "status": "Red"}, {"documentId": "63192606", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "Photonics Journal", "organization": "Universidad de Carabobo", "decisionDate": "2025-12-30", "status": "Red"}, {"documentId": "63174239", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Feiyue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Automation Science and Engineering", "organization": "DeSci Center of Parallel Intelligence and the University Research and Innovation Center at Obuda University", "decisionDate": "2025-12-30", "status": "Red"}, {"documentId": "63158087", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Feiyue.", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Systems, Man and Cybernetics: Systems", "organization": "Chinese Academy of Sciences Institute of Automation", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "63154697", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@iiitnr.edu.in", "country": "Not Recorded", "journalName": "Transactions on Audio, Speech and Language Processing", "organization": "Dr Shyama Prasad Mukherjee International Institute of Information Technology", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "63160032", "source": "S1M", "reason": "PCL", "authorName": "Sukhov, Dr. Andrey M.", "authorEmail": "sukhov@ssau.ru", "country": "Crimea", "journalName": "IEEE Access", "organization": "Sevastopol State University", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "63160684", "source": "S1M", "reason": "PAL", "authorName": "Alkahtani, Dr. Hend Khalid", "authorEmail": "hkalqahtani@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "63146495", "source": "S1M", "reason": "PCL", "authorName": "REYNALDO GARC\u00cdA, Mr. A. A.", "authorEmail": "15-10527@usb.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "63122605", "source": "S1M", "reason": "PAL", "authorName": "Lv, Prof. Gang", "authorEmail": "ganglv@bjtu.edu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Beijing Jiaotong University", "decisionDate": "2025-12-24", "status": "Red"}, {"documentId": "63117990", "source": "S1M", "reason": "PCL", "authorName": "Sanmartin-Mendoza, Dr. Paul", "authorEmail": "paul.sanmartin@unisimon.edu.co", "country": "Venezuela", "journalName": "Engineering Management Review", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-12-24", "status": "Red"}, {"documentId": "63119421", "source": "S1M", "reason": "PCL", "authorName": "Sanmartin-Mendoza, Dr. Paul", "authorEmail": "paul.sanmartin@unisimon.edu.co", "country": "Venezuela", "journalName": "Engineering Management Review", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-12-24", "status": "Red"}, {"documentId": "63121421", "source": "S1M", "reason": "PAL", "authorName": "Alajmi, Dr. Masoud", "authorEmail": "ms.alajmi@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Taif University", "decisionDate": "2025-12-24", "status": "Red"}, {"documentId": "63117990", "source": "S1M", "reason": "PCL", "authorName": "Sanmartin-Mendoza, Dr. Paul", "authorEmail": "paul.sanmartin@unisimon.edu.co", "country": "Venezuela", "journalName": "Engineering Management Review", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-12-23", "status": "Red"}, {"documentId": "63095149", "source": "S1M", "reason": "PAL", "authorName": "Mandal, Dr. Sanjeev Kumar", "authorEmail": "km.sanjeev@jainuniversity.ac.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Aeronautical Society of India Bangalore Branch", "decisionDate": "2025-12-22", "status": "Red"}, {"documentId": "63061908", "source": "S1M", "reason": "PCL", "authorName": "Lee, Dr. Chien-Ding", "authorEmail": "cdlee227@mail.nou.edu.tw", "country": "Venezuela", "journalName": "IEEE Transactions on Learning Technologies", "organization": "National Open University", "decisionDate": "2025-12-19", "status": "Red"}, {"documentId": "63030781", "source": "S1M", "reason": "PAL", "authorName": "Yan, Dr. Xianglian", "authorEmail": "yanxl@epri.sgcc.com.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Dielectrics and Electrical Insulation", "organization": "China Electric Power Research Institute", "decisionDate": "2025-12-18", "status": "Red"}, {"documentId": "62814142", "source": "S1M", "reason": "PAL", "authorName": "Qiu, Mr. Meikang", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Transactions on Information Forensics & Security", "organization": "Augusta University", "decisionDate": "2025-12-17", "status": "Red"}, {"documentId": "63030781", "source": "S1M", "reason": "PAL", "authorName": "Yan, Dr. Xianglian", "authorEmail": "yanxl@epri.sgcc.com.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Dielectrics and Electrical Insulation", "organization": "China Electric Power Research Institute", "decisionDate": "2025-12-17", "status": "Red"}, {"documentId": "62981986", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "pancs@sohu.com", "country": "Not Recorded", "journalName": "Transactions on Dependable and Secure Computing", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "61720267", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santoshrus@yahoo.com", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "62989323", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Yongshun", "authorEmail": "wangysh@mail.lzjtu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Beijing Jiaotong University School of Electronic and Information Engineering", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "62533138", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Feiyue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Automation Science and Engineering", "organization": "Not Recorded", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "62983193", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Feiyue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Chinese Academy of Sciences Institute of Automation", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "62962646", "source": "S1M", "reason": "PAL", "authorName": "Khalid Alkahtani, Dr. Hend", "authorEmail": "hkalqahtani@pnu.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "62962646", "source": "S1M", "reason": "PAL", "authorName": "Khalid Alkahtani, Dr. Hend", "authorEmail": "hkalqahtani@pnu.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-12-12", "status": "Red"}, {"documentId": "62922759", "source": "S1M", "reason": "PAL", "authorName": "Ma, Prof. Tiedong", "authorEmail": "tdma@cqu.edu.cn", "country": "Not Recorded", "journalName": "Transactions on Mechatronics", "organization": "Chongqing University", "decisionDate": "2025-12-10", "status": "Red"}, {"documentId": "62877289", "source": "S1M", "reason": "PAL", "authorName": "Oleiwi, Prof. T. A.", "authorEmail": "taelwi82@gmail.com", "country": "Not Recorded", "journalName": "IEEE Journal of Microwaves", "organization": "Al-Nahrain University", "decisionDate": "2025-12-08", "status": "Red"}, {"documentId": "62857807", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Transactions on Vehicular Technology", "organization": "Universidad de Carabobo", "decisionDate": "2025-12-05", "status": "Red"}, {"documentId": "62858902", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Fei Yue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Cognitive Communications and Networking", "organization": "State Key Laboratory for Management and Control of Complex Systems", "decisionDate": "2025-12-05", "status": "Red"}, {"documentId": "62638103", "source": "S1M", "reason": "PCL", "authorName": "Kim, Dr. Myong-Ho", "authorEmail": "kmh1966@ligua.edu.kp", "country": "North Korea", "journalName": "Transactions on Industrial Electronics", "organization": "University of Sciences", "decisionDate": "2025-12-03", "status": "Red"}, {"documentId": "62818260", "source": "S1M", "reason": "PAL", "authorName": "Alajmi, Dr. Masoud", "authorEmail": "ms.alajmi@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "AO TAIF", "decisionDate": "2025-12-03", "status": "Red"}, {"documentId": "62759213", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Fei-Yue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "DeSci Center of Parallel Intelligence Obuda University", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "62638103", "source": "S1M", "reason": "PCL", "authorName": "Han, Dr. Su-Un", "authorEmail": "hsu2002@ligua.edu.kp", "country": "North Korea", "journalName": "Transactions on Industrial Electronics", "organization": "University of Sciences", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "62803657", "source": "S1M", "reason": "PAL", "authorName": "Mohamed, Dr. Heba G.", "authorEmail": "hegmohamed@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "62760781", "source": "S1M", "reason": "PAL", "authorName": "Ganga, Dr. Rama Koteswara Rao", "authorEmail": "grkraoganga@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "62776373", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Fei-Yue", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Computational Social Systems", "organization": "Macau University of Science and Technology", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "62761960", "source": "S1M", "reason": "PCL", "authorName": "Thak, Mr. Phyong Jon", "authorEmail": "tpj19931228@163.com", "country": "North Korea", "journalName": "IEEE Transactions on Dielectrics and Electrical Insulation", "organization": "Pyongyang University of Transport", "decisionDate": "2025-11-28", "status": "Red"}, {"documentId": "62759039", "source": "S1M", "reason": "PAL", "authorName": "Ghoneim, Dr. Sherif", "authorEmail": "s.ghoneim@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Taif University", "decisionDate": "2025-11-28", "status": "Red"}, {"documentId": "62615552", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "pancs@sohu.com", "country": "Not Recorded", "journalName": "Transactions on Computers", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-11-21", "status": "Red"}, {"documentId": "62638103", "source": "S1M", "reason": "PCL", "authorName": "Jong, Dr. Myong-Hak", "authorEmail": "jmh1982@star-co.net.kp", "country": "North Korea", "journalName": "Transactions on Industrial Electronics", "organization": "University of Sciences", "decisionDate": "2025-11-20", "status": "Red"}, {"documentId": "62383366", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Prof. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "IEEE Sensors Reviews", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-19", "status": "Red"}, {"documentId": "62181813", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Prof. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "IEEE Sensors Reviews", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-19", "status": "Red"}, {"documentId": "62282677", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Prof. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "IEEE Sensors Reviews", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-19", "status": "Red"}, {"documentId": "61918449", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Transactions on NanoBioscience", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-17", "status": "Red"}, {"documentId": "62591560", "source": "S1M", "reason": "PAL", "authorName": "Mohamed, Dr. Heba G.", "authorEmail": "hegmohamed@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-11-17", "status": "Red"}, {"documentId": "62591560", "source": "S1M", "reason": "PAL", "authorName": "Mohamed, Dr. Heba G.", "authorEmail": "hegmohamed@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-11-17", "status": "Red"}, {"documentId": "62538166", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Multimedia", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-11-14", "status": "Red"}, {"documentId": "62540980", "source": "S1M", "reason": "PAL", "authorName": "Nderu, Dr. Lawrence", "authorEmail": "lnderu@jkuat.ac.ke", "country": "Not Recorded", "journalName": "IEEE Transactions on Computational Social Systems", "organization": "Jomo Kenyatta University of Agriculture and Technology", "decisionDate": "2025-11-14", "status": "Red"}, {"documentId": "62531126", "source": "S1M", "reason": "PAL", "authorName": "Almotiri, Dr. Sultan H.", "authorEmail": "shmotiri@uqu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Umm Al-Qura University College of Computing", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "62100133", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "62528965", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "KL Deemed to be University", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "62517973", "source": "S1M", "reason": "PCL", "authorName": "Mikhaylichenko, Mrs. Tamara V.", "authorEmail": "fsbsi.mhi.tamara@yandex.ru", "country": "Crimea", "journalName": "Geoscience and Remote Sensing Letters", "organization": "Marine Hydrophysical Institute of RAS", "decisionDate": "2025-11-12", "status": "Red"}, {"documentId": "62465521", "source": "S1M", "reason": "PCL", "authorName": "Moronta, Dr. Jose", "authorEmail": "jmoronta@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Reliability", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-11-10", "status": "Red"}, {"documentId": "61397528", "source": "S1M", "reason": "PCL", "authorName": "Chung, Dr Joon Son", "authorEmail": "joonson@kaist.ac.kr", "country": "North Korea", "journalName": "IEEE Transactions on Multimedia", "organization": "KAIST", "decisionDate": "2025-11-10", "status": "Red"}, {"documentId": "61397528", "source": "S1M", "reason": "PCL", "authorName": "Chung, Dr Joon Son", "authorEmail": "joonson@kaist.ac.kr", "country": "North Korea", "journalName": "IEEE Transactions on Multimedia", "organization": "KAIST", "decisionDate": "2025-11-07", "status": "Red"}, {"documentId": "62447551", "source": "S1M", "reason": "PCL", "authorName": "REYNALDO GARC\u00cdA, Mr. A. A.", "authorEmail": "15-10527@usb.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-11-07", "status": "Red"}, {"documentId": "62361391", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@iiitnr.edu.in", "country": "Not Recorded", "journalName": "IEEE Sensors Letters", "organization": "Dr Shyama Prasad Mukherjee International Institute of Information Technology", "decisionDate": "2025-11-03", "status": "Red"}, {"documentId": "62374786", "source": "S1M", "reason": "PAL", "authorName": "Akhmediyarova, Dr. Ainur", "authorEmail": "a.akhmediyarova@satbayev.university", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Satbayev University", "decisionDate": "2025-11-03", "status": "Red"}, {"documentId": "62319916", "source": "S1M", "reason": "PAL", "authorName": "Li, Mr. Tianhui", "authorEmail": "ith023@stu.xjtu.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Dielectrics and Electrical Insulation", "organization": "State Grid Hebei Electric Power Co Ltd Electric Power Research Institute", "decisionDate": "2025-10-31", "status": "Red"}, {"documentId": "62331521", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@iiitnr.edu.in", "country": "Not Recorded", "journalName": "IEEE Transactions on Medical Robotics and Bionics", "organization": "Dr Shyama Prasad Mukherjee International Institute of Information Technology", "decisionDate": "2025-10-30", "status": "Red"}, {"documentId": "62329255", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Prof. Santosh", "authorEmail": "santosh@iiitnr.edu.in", "country": "Not Recorded", "journalName": "IEEE Transactions on Medical Imaging", "organization": "Dr Shyama Prasad Mukherjee International Institute of Information Technology", "decisionDate": "2025-10-30", "status": "Red"}, {"documentId": "62259920", "source": "S1M", "reason": "PCL", "authorName": "Ri, Mr. Hyun Min", "authorEmail": "rabbit2253@mail.ru", "country": "North Korea", "journalName": "IEEE Transactions on Wireless Communications", "organization": "Kim Il Sung University", "decisionDate": "2025-10-27", "status": "Red"}, {"documentId": "62176967", "source": "S1M", "reason": "PCL", "authorName": "Ibraimovna, Mrs. Mustafayeva Meryem", "authorEmail": "mestafayeva@sevsu.ru", "country": "Crimea", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Sevastopol'skij gosudarstvennyj universitet", "decisionDate": "2025-10-20", "status": "Red"}, {"documentId": "62168791", "source": "S1M", "reason": "PCL", "authorName": "Andreevich, Mr. Tsofnas Denis", "authorEmail": "tsofnas@engineer.com", "country": "Crimea", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Sevastopol'skij gosudarstvennyj universitet", "decisionDate": "2025-10-20", "status": "Red"}, {"documentId": "62091494", "source": "S1M", "reason": "PAL", "authorName": "mousa, Mr. Ramin", "authorEmail": "raminmousa@znu.ac.ir", "country": "Not Recorded", "journalName": "Transactions on Pattern Analysis and Machine Intelligence", "organization": "University of Zanjan", "decisionDate": "2025-10-13", "status": "Red"}, {"documentId": "62084111", "source": "S1M", "reason": "PAL", "authorName": "Mohamed, Dr. Heba G.", "authorEmail": "hegmohamed@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University College of Social Work", "decisionDate": "2025-10-13", "status": "Red"}, {"documentId": "62060487", "source": "S1M", "reason": "PAL", "authorName": "Kumar, Dr. Santosh", "authorEmail": "santosh@iiitnr.edu.in", "country": "Not Recorded", "journalName": "IEEE Transactions on Artificial Intelligence", "organization": "Dr Shyama Prasad Mukherjee International Institute of Information Technology", "decisionDate": "2025-10-13", "status": "Red"}, {"documentId": "61187516", "source": "S1M", "reason": "PAL", "authorName": "DOM\u017bA\u0141, Prof. JERZY", "authorEmail": "jerzy.domzal@agh.edu.pl", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Biblioteka Krakow", "decisionDate": "2025-10-09", "status": "Red"}, {"documentId": "62028805", "source": "S1M", "reason": "PAL", "authorName": "Mohamed, Dr. Heba G.", "authorEmail": "hegmohamed@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-10-09", "status": "Red"}, {"documentId": "61187516", "source": "S1M", "reason": "PAL", "authorName": "DOM\u017bA\u0141, Prof. JERZY", "authorEmail": "jerzy.domzal@agh.edu.pl", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Biblioteka Krakow", "decisionDate": "2025-10-08", "status": "Red"}, {"documentId": "61997866", "source": "S1M", "reason": "PAL", "authorName": "Zheng, Prof. Weifa", "authorEmail": "wf@gdufe.edu.cn", "country": "Not Recorded", "journalName": "IEEE Open Journal of the Communications Society", "organization": "Guangdong University of Finance & Economics", "decisionDate": "2025-10-07", "status": "Red"}, {"documentId": "61843618", "source": "S1M", "reason": "PAL", "authorName": "MAJEED, Dr. FIAZ", "authorEmail": "fiiaaz.majeed@uog.edu.pk", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "University of Gujrat", "decisionDate": "2025-09-30", "status": "Red"}, {"documentId": "61853512", "source": "S1M", "reason": "PAL", "authorName": "Xin, Mrs. Feng Jian", "authorEmail": "fengjianxin863@163.com", "country": "Not Recorded", "journalName": "IEEE Wireless Communications Letters", "organization": "Dalian University", "decisionDate": "2025-09-29", "status": "Red"}, {"documentId": "61769202", "source": "S1M", "reason": "PCL", "authorName": "Cheboxarov, Dr. Victor V.", "authorEmail": "vchebox@gmail.com", "country": "Crimea", "journalName": "IEEE Transactions on Reliability", "organization": "Moskovskij gosudarstvennyj universitet imeni M V Lomonosova - Filial v Sevastopole", "decisionDate": "2025-09-22", "status": "Red"}, {"documentId": "61027318", "source": "S1M", "reason": "PCL", "authorName": "Gzyl, Prof. Henryk", "authorEmail": "henryk.gzyl@iesa.edu.ve", "country": "Venezuela", "journalName": "Transactions on Signal Processing", "organization": "Center for Finance IESA School of Business", "decisionDate": "2025-09-22", "status": "Red"}, {"documentId": "61027318", "source": "S1M", "reason": "PCL", "authorName": "Gzyl, Prof. Henryk", "authorEmail": "henryk.gzyl@iesa.edu.ve", "country": "Venezuela", "journalName": "Transactions on Signal Processing", "organization": "Center for Finance IESA School of Business", "decisionDate": "2025-09-19", "status": "Red"}, {"documentId": "61397528", "source": "S1M", "reason": "PCL", "authorName": "Chung, Dr Joon Son", "authorEmail": "joonson@kaist.ac.kr", "country": "North Korea", "journalName": "IEEE Transactions on Multimedia", "organization": "KAIST", "decisionDate": "2025-09-11", "status": "Red"}, {"documentId": "61524186", "source": "S1M", "reason": "PAL", "authorName": "Mandal, Dr. Sanjeev Kumar", "authorEmail": "km.sanjeev@jainuniversity.ac.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "JAIN (Deemed-to-be University)", "decisionDate": "2025-09-04", "status": "Red"}, {"documentId": "61446992", "source": "S1M", "reason": "PAL", "authorName": "Zou, Mrs. Yichao", "authorEmail": "2952782902@qq.com", "country": "Not Recorded", "journalName": "IEEE Open Access Journal of Power and Energy", "organization": "State Grid Fujian Electric Power Company Economic Technology Research Institute", "decisionDate": "2025-09-01", "status": "Red"}, {"documentId": "61450247", "source": "S1M", "reason": "PAL", "authorName": "Alajmi, Dr. Masoud", "authorEmail": "ms.alajmi@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Taif University College of Science", "decisionDate": "2025-09-01", "status": "Red"}, {"documentId": "61421691", "source": "S1M", "reason": "PCL", "authorName": "Moreno, Prof. Carlos", "authorEmail": "carlosmanuel.moreno.ucv@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Communications", "organization": "Universidad Central de Venezuela Facultad de Ingenieria", "decisionDate": "2025-08-28", "status": "Red"}, {"documentId": "61423406", "source": "S1M", "reason": "PAL", "authorName": "HU, Dr. FEI", "authorEmail": "hufei@tongji.edu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Tongji University College of Design and Innovation", "decisionDate": "2025-08-28", "status": "Red"}, {"documentId": "61347577", "source": "S1M", "reason": "PCL", "authorName": "Sanmartin, Prof. Paul", "authorEmail": "paul.sanmartin@unisimon.edu.co", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-08-25", "status": "Red"}, {"documentId": "61321273", "source": "S1M", "reason": "PAL", "authorName": "Elwi, Prof. Taha A.", "authorEmail": "iatrcbaghdad@gmail.com", "country": "Not Recorded", "journalName": "IEEE Transactions on Industrial Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-08-25", "status": "Red"}, {"documentId": "60710549", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Circuits and Systems Magazine", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-08-25", "status": "Red"}, {"documentId": "61240667", "source": "S1M", "reason": "PAL", "authorName": "Kung, Sun-Yuan", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Princeton University", "decisionDate": "2025-08-22", "status": "Red"}, {"documentId": "61231677", "source": "S1M", "reason": "PCL", "authorName": "Lin, Prof. Jun-You", "authorEmail": "jylin@mail.nou.edu.tw", "country": "Venezuela", "journalName": "IEEE Access", "organization": "National Open University", "decisionDate": "2025-08-22", "status": "Red"}, {"documentId": "61344671", "source": "S1M", "reason": "PAL", "authorName": "Alqahtani, Dr. Hend", "authorEmail": "hkalqahtani@pnu.edu.sa", "country": "Not Recorded", "journalName": "Computer", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-08-22", "status": "Red"}, {"documentId": "61209764", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Carabobo", "decisionDate": "2025-08-22", "status": "Red"}, {"documentId": "61310735", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Prof. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "Transactions on Pattern Analysis and Machine Intelligence", "organization": "Tsinghua Univerisity", "decisionDate": "2025-08-21", "status": "Red"}, {"documentId": "61231677", "source": "S1M", "reason": "PCL", "authorName": "Lin, Prof. Jun-You", "authorEmail": "jylin@mail.nou.edu.tw", "country": "Venezuela", "journalName": "IEEE Access", "organization": "National Open University", "decisionDate": "2025-08-21", "status": "Red"}, {"documentId": "61321324", "source": "S1M", "reason": "PCL", "authorName": "Mikhaylichenko, Mrs. Tamara V.", "authorEmail": "fsbsi.mhi.tamara@yandex.ru", "country": "Crimea", "journalName": "Geoscience and Remote Sensing Letters", "organization": "Marine Hydrophysical Institute of RAS", "decisionDate": "2025-08-21", "status": "Red"}, {"documentId": "61321273", "source": "S1M", "reason": "PAL", "authorName": "Elwi, Prof. Taha A.", "authorEmail": "iatrcbaghdad@gmail.com", "country": "Not Recorded", "journalName": "IEEE Transactions on Industrial Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-08-21", "status": "Red"}, {"documentId": "61209764", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Carabobo", "decisionDate": "2025-08-21", "status": "Red"}, {"documentId": "61252096", "source": "S1M", "reason": "PAL", "authorName": "Ma, Dr. Deying", "authorEmail": "mdy7260@163.com", "country": "Not Recorded", "journalName": "IEEE Transactions on Dielectrics and Electrical Insulation", "organization": "State Grid Henan Electric Power Research Institute", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "59654950", "source": "S1M", "reason": "PCL", "authorName": "Arriaga, Mr. Pablo", "authorEmail": "pabloarriagamata@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Power Delivery", "organization": "Not Recorded", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "61231677", "source": "S1M", "reason": "PCL", "authorName": "Lin, Prof. Jun-You", "authorEmail": "jylin@mail.nou.edu.tw", "country": "Venezuela", "journalName": "IEEE Access", "organization": "National Open University", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "61209764", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Carabobo", "decisionDate": "2025-08-13", "status": "Red"}, {"documentId": "61151831", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd Asif", "authorEmail": "ohaasif@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Bakhtar University", "decisionDate": "2025-08-11", "status": "Red"}, {"documentId": "61142223", "source": "S1M", "reason": "PAL", "authorName": "Almujally, Dr. Nouf Abdullah", "authorEmail": "naalmujally@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-08-08", "status": "Red"}, {"documentId": "61112392", "source": "S1M", "reason": "PAL", "authorName": "Ahmad, Dr. Farooq", "authorEmail": "farooqahmad@cuilahore.edu.pk", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "COMSATS University Islamabad - Lahore Campus", "decisionDate": "2025-08-06", "status": "Red"}, {"documentId": "61047541", "source": "S1M", "reason": "PAL", "authorName": "Xin, Mr. Weifeng", "authorEmail": "317675068@qq.com", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "State Grid Henan Electric Power Research Institute", "decisionDate": "2025-08-04", "status": "Red"}, {"documentId": "61039819", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. chengsheng", "authorEmail": "pancs@sohu.com", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-08-04", "status": "Red"}, {"documentId": "61027318", "source": "S1M", "reason": "PCL", "authorName": "Gzyl, Prof. Henryk", "authorEmail": "henryk.gzyl@iesa.edu.ve", "country": "Venezuela", "journalName": "Transactions on Signal Processing", "organization": "Center for Finance IESA School of Business", "decisionDate": "2025-08-01", "status": "Red"}, {"documentId": "60972851", "source": "S1M", "reason": "PAL", "authorName": "Zhao, Miss Ruifen", "authorEmail": "zhaoruifen_hz@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Zhejiang Institute of Economic and Trade", "decisionDate": "2025-07-31", "status": "Red"}, {"documentId": "61012511", "source": "S1M", "reason": "PCL", "authorName": "Moreno, Prof. Carlos", "authorEmail": "carlosmoreno.ucv@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Cognitive Communications and Networking", "organization": "Universidad Central de Venezuela Facultad de Ingenieria", "decisionDate": "2025-07-31", "status": "Red"}, {"documentId": "61027318", "source": "S1M", "reason": "PCL", "authorName": "Gzyl, Prof. Henryk", "authorEmail": "henryk.gzyl@iesa.edu.ve", "country": "Venezuela", "journalName": "Transactions on Signal Processing", "organization": "Center for Finance IESA School of Business", "decisionDate": "2025-07-31", "status": "Red"}, {"documentId": "61005626", "source": "S1M", "reason": "PAL", "authorName": "MANDAL, Dr. SANJEEV KUMAR", "authorEmail": "km.sanjeev@jainuniversity.ac.in", "country": "Not Recorded", "journalName": "IEEE Open Journal of the Communications Society", "organization": "JAIN (Deemed-to-be University)", "decisionDate": "2025-07-30", "status": "Red"}, {"documentId": "60972851", "source": "S1M", "reason": "PAL", "authorName": "Zhao, Miss Ruifen", "authorEmail": "zhaoruifen_hz@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Zhejiang Institute of Economic and Trade", "decisionDate": "2025-07-30", "status": "Red"}, {"documentId": "61005626", "source": "S1M", "reason": "PAL", "authorName": "MANDAL, Dr. SANJEEV KUMAR", "authorEmail": "km.sanjeev@jainuniversity.ac.in", "country": "Not Recorded", "journalName": "IEEE Open Journal of the Communications Society", "organization": "JAIN (Deemed-to-be University)", "decisionDate": "2025-07-29", "status": "Red"}, {"documentId": "60936403", "source": "S1M", "reason": "PAL", "authorName": "Kim, Prof. Tai Hoon", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Chonnam National University", "decisionDate": "2025-07-25", "status": "Red"}, {"documentId": "60571198", "source": "S1M", "reason": "PCL", "authorName": "MACEDO, Dr. V\u00cdCTOR DANIEL JIM\u00c9NEZ", "authorEmail": "victordaniel2@gmail.com", "country": "North Korea", "journalName": "IEEE Access", "organization": "Pyongyang University of Mechanical Engineering Faculty of Mechanical Engineering", "decisionDate": "2025-07-21", "status": "Red"}, {"documentId": "60841387", "source": "S1M", "reason": "PCL", "authorName": "Moreno, Prof. Carlos", "authorEmail": "carlosmanuel.moreno.ucvv@gmail.com", "country": "Venezuela", "journalName": "Transactions on Parallel and Distributed Systems", "organization": "Universidad Central de Venezuela Facultad de Ingenieria", "decisionDate": "2025-07-21", "status": "Red"}, {"documentId": "60838977", "source": "S1M", "reason": "PAL", "authorName": "Zhan, Mr. Zhenyu", "authorEmail": "zhanzhyha.sgcc@foxmail.com", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "State Grid Henan Electric Power Company", "decisionDate": "2025-07-21", "status": "Red"}, {"documentId": "60738868", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Carabobo", "decisionDate": "2025-07-18", "status": "Red"}, {"documentId": "60818978", "source": "S1M", "reason": "PAL", "authorName": "Ashraf, Dr. Imran", "authorEmail": "imranashraf@yu.ac.kr", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Yeungnam University", "decisionDate": "2025-07-18", "status": "Red"}, {"documentId": "60833646", "source": "S1M", "reason": "PAL", "authorName": "Li, Prof. Jinbin", "authorEmail": "lijingbin@shzu.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Industrial Informatics", "organization": "Shihezi University", "decisionDate": "2025-07-18", "status": "Red"}, {"documentId": "60818978", "source": "S1M", "reason": "PAL", "authorName": "Ashraf, Dr. Imran", "authorEmail": "imranashraf@yu.ac.kr", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Yeungnam University", "decisionDate": "2025-07-17", "status": "Red"}, {"documentId": "60799511", "source": "S1M", "reason": "PAL", "authorName": "Chen, Dr. Xiaoxian", "authorEmail": "chenxiaoxian_@qlit.edu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Qilu Institute of Technology", "decisionDate": "2025-07-17", "status": "Red"}, {"documentId": "60814795", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Multimedia", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-07-17", "status": "Red"}, {"documentId": "60799511", "source": "S1M", "reason": "PAL", "authorName": "Chen, Dr. Xiaoxian", "authorEmail": "chenxiaoxian_@qlit.edu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Qilu Institute of Technology", "decisionDate": "2025-07-16", "status": "Red"}, {"documentId": "60778097", "source": "S1M", "reason": "PAL", "authorName": "Memyrbayev, Dr. Orken", "authorEmail": "morkenj@mail.ru", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Institute of Information and Computational Technologies", "decisionDate": "2025-07-15", "status": "Red"}, {"documentId": "60753601", "source": "S1M", "reason": "PAL", "authorName": "Alohali, Dr. Manal Abdullah", "authorEmail": "maalohaly@pnu.edu.sa", "country": "Not Recorded", "journalName": "Journal of Selected Topics in Applied Earth Observations and Remote Sensing", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-07-14", "status": "Red"}, {"documentId": "60747979", "source": "S1M", "reason": "PCL", "authorName": "Lin, Prof. Jun-You", "authorEmail": "jylin@mail.nou.edu.tw", "country": "Venezuela", "journalName": "Transactions on Engineering Management", "organization": "National Open University", "decisionDate": "2025-07-14", "status": "Red"}, {"documentId": "60738868", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Carabobo", "decisionDate": "2025-07-14", "status": "Red"}, {"documentId": "60740934", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd Asif", "authorEmail": "ohaasif@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Bakhtar University", "decisionDate": "2025-07-14", "status": "Red"}, {"documentId": "60627857", "source": "S1M", "reason": "PAL", "authorName": "Alharbi, Dr. Abdullah", "authorEmail": "amharbi@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Open Journal of the Computer Society", "organization": "Taif University", "decisionDate": "2025-07-07", "status": "Red"}, {"documentId": "60622514", "source": "S1M", "reason": "PAL", "authorName": "Kung, Dr S. . Y", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "IEEE Transactions on Multimedia", "organization": "Princeton University", "decisionDate": "2025-07-07", "status": "Red"}, {"documentId": "60642630", "source": "S1M", "reason": "PAL", "authorName": "S S, Dr. Karthikeyan", "authorEmail": "sskarthikeyan@nitt.edu", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "National Institute of Technology Tiruchirappalli Department of Electronics and Communication Engineering", "decisionDate": "2025-07-07", "status": "Red"}, {"documentId": "60652562", "source": "S1M", "reason": "PAL", "authorName": "Alharbi, Dr. Abdullah", "authorEmail": "amharbi@tu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Open Journal of the Computer Society", "organization": "Taif University", "decisionDate": "2025-07-07", "status": "Red"}, {"documentId": "60614601", "source": "S1M", "reason": "PCL", "authorName": "REYNALDO GARC\u00cdA, Mr. A. A.", "authorEmail": "15-10527@usb.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-07-04", "status": "Red"}, {"documentId": "60582889", "source": "S1M", "reason": "PAL", "authorName": "Karimi, Hamid Reza", "authorEmail": "hamidreza.karimi@polimi.it", "country": "Not Recorded", "journalName": "IEEE Transactions on Systems, Man and Cybernetics: Systems", "organization": "Politecnico di Milano Dipartimento di Meccanica", "decisionDate": "2025-07-03", "status": "Red"}, {"documentId": "60563741", "source": "S1M", "reason": "PAL", "authorName": "Zhao, Miss Ruifen", "authorEmail": "zhaoruifen_hz@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Zhejiang Institute of Economic and Trade", "decisionDate": "2025-07-02", "status": "Red"}, {"documentId": "60582889", "source": "S1M", "reason": "PAL", "authorName": "Karimi, Hamid Reza", "authorEmail": "hamidreza.karimi@polimi.it", "country": "Not Recorded", "journalName": "IEEE Transactions on Systems, Man and Cybernetics: Systems", "organization": "Politecnico di Milano Dipartimento di Meccanica", "decisionDate": "2025-07-02", "status": "Red"}, {"documentId": "60563741", "source": "S1M", "reason": "PAL", "authorName": "Zhao, Miss Ruifen", "authorEmail": "zhaoruifen_hz@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Zhejiang Institute of Economic and Trade", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "60563741", "source": "S1M", "reason": "PAL", "authorName": "Zhao, Miss Ruifen", "authorEmail": "zhaoruifen_hz@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Zhejiang Institute of Economic and Trade", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "60494747", "source": "S1M", "reason": "PAL", "authorName": "Aljohani, Prof. Abeer", "authorEmail": "aahjohani@taibahu.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Taibah University", "decisionDate": "2025-06-26", "status": "Red"}, {"documentId": "60467759", "source": "S1M", "reason": "PAL", "authorName": "Wang, Prof. Wenmin", "authorEmail": "wmwang@must.edu.mo", "country": "Not Recorded", "journalName": "IEEE Transactions on Medical Imaging", "organization": "Macau University of Science and Technology", "decisionDate": "2025-06-25", "status": "Red"}, {"documentId": "60424671", "source": "S1M", "reason": "PCL", "authorName": "Chung, Dr Joon Son", "authorEmail": "joonson@kaist.ac.kr", "country": "North Korea", "journalName": "IEEE Transactions on Multimedia", "organization": "KAIST", "decisionDate": "2025-06-24", "status": "Red"}, {"documentId": "60414473", "source": "S1M", "reason": "PAL", "authorName": "Kung, Prof. Sun-Yuan", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "IEEE Transactions on Medical Imaging", "organization": "Princeton University", "decisionDate": "2025-06-23", "status": "Red"}, {"documentId": "60418037", "source": "S1M", "reason": "PAL", "authorName": "Mansouri, Prof. Wahida", "authorEmail": "wahida.smari@nbu.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Northern Border University College of Science", "decisionDate": "2025-06-23", "status": "Red"}, {"documentId": "60378354", "source": "S1M", "reason": "PCL", "authorName": "PERAZA, Prof. DELGI", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Open Journal of the Communications Society", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-19", "status": "Red"}, {"documentId": "60378354", "source": "S1M", "reason": "PCL", "authorName": "PERAZA, Prof. DELGI", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Open Journal of the Communications Society", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-18", "status": "Red"}, {"documentId": "59199118", "source": "S1M", "reason": "PAL", "authorName": "Qiu, Dr. Meikang", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems", "organization": "Augusta University", "decisionDate": "2025-06-17", "status": "Red"}, {"documentId": "60312683", "source": "S1M", "reason": "PAL", "authorName": "Qiu, Meikang", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "IEEE Transactions on Systems, Man and Cybernetics: Systems", "organization": "Augusta University", "decisionDate": "2025-06-16", "status": "Red"}, {"documentId": "60272963", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "Photonics Journal", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-11", "status": "Red"}, {"documentId": "60229471", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "pancs@sohu.com", "country": "Not Recorded", "journalName": "Transactions on Mobile Computing", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-06-10", "status": "Red"}, {"documentId": "60229471", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "pancs@sohu.com", "country": "Not Recorded", "journalName": "Transactions on Mobile Computing", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-06-09", "status": "Red"}, {"documentId": "60189841", "source": "S1M", "reason": "PAL", "authorName": "Alrslani, Dr. Faheed A.F.", "authorEmail": "f.alrslani@nbu.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Northern Border University", "decisionDate": "2025-06-05", "status": "Red"}, {"documentId": "60185287", "source": "S1M", "reason": "PAL", "authorName": "Liu, Mr. Dong", "authorEmail": "3250588043@qq.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Southwest Petroleum University", "decisionDate": "2025-06-05", "status": "Red"}, {"documentId": "60106383", "source": "S1M", "reason": "PCL", "authorName": "D\u00edaz, Miss Andrea", "authorEmail": "18-10826@usb.ve", "country": "Venezuela", "journalName": "Transactions on Computers", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-05-30", "status": "Red"}, {"documentId": "60107637", "source": "S1M", "reason": "PAL", "authorName": "K R, Dr. Raghunandan", "authorEmail": "raghunandan@nitte.edu.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "NMAM Institute of Technology", "decisionDate": "2025-05-30", "status": "Red"}, {"documentId": "60107157", "source": "S1M", "reason": "PAL", "authorName": "RAMA MOORTHY, Dr. H.", "authorEmail": "ramamoorthy.h@nitte.edu.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "NITTE", "decisionDate": "2025-05-30", "status": "Red"}, {"documentId": "59747177", "source": "S1M", "reason": "PAL", "authorName": "RAMA MOORTHY, Dr. H.", "authorEmail": "ramamoorthy.h@nitte.edu.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "NITTE", "decisionDate": "2025-05-30", "status": "Red"}, {"documentId": "59747177", "source": "S1M", "reason": "PAL", "authorName": "RAMA MOORTHY, Dr. H.", "authorEmail": "ramamoorthy.h@nitte.edu.in", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "NITTE", "decisionDate": "2025-05-30", "status": "Red"}, {"documentId": "60033770", "source": "S1M", "reason": "PAL", "authorName": "Boddu, Dr. Raja Sarath Kumar", "authorEmail": "iamrajaboddu@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Malla Reddy College of Engineering & Technology", "decisionDate": "2025-05-27", "status": "Red"}, {"documentId": "59991549", "source": "S1M", "reason": "PAL", "authorName": "Alsubai, Dr. Shtwai", "authorEmail": "sa.alsubai@psau.edu.sa", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Prince Sattam bin Abdulaziz University", "decisionDate": "2025-05-22", "status": "Red"}, {"documentId": "59654950", "source": "S1M", "reason": "PCL", "authorName": "SORRENTINO, Prof. ELMER", "authorEmail": "elmersor@usb.ve", "country": "Venezuela", "journalName": "IEEE Transactions on Power Delivery", "organization": "UNIVERSIDAD SIMON BOLIVAR", "decisionDate": "2025-05-13", "status": "Red"}, {"documentId": "58803176", "source": "S1M", "reason": "PCL", "authorName": "Perez, Nelson", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Los Andes", "decisionDate": "2025-05-08", "status": "Red"}, {"documentId": "59782431", "source": "S1M", "reason": "PAL", "authorName": "ZHEN, Prof. TONG", "authorEmail": "zt@haut.edu.cn", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Henan University of Technology", "decisionDate": "2025-05-08", "status": "Red"}, {"documentId": "59756280", "source": "S1M", "reason": "PAL", "authorName": "KHALAF, Dr. OSAMAH", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Al-Nahrain University", "decisionDate": "2025-05-06", "status": "Red"}, {"documentId": "59758652", "source": "S1M", "reason": "PAL", "authorName": "KHALAF, Dr. OSAMAH", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Al-Nahrain University", "decisionDate": "2025-05-06", "status": "Red"}, {"documentId": "59738550", "source": "S1M", "reason": "PAL", "authorName": "Wang, Professor Wenmin", "authorEmail": "wmwang@must.edu.mo", "country": "Not Recorded", "journalName": "IEEE Transactions on Multimedia", "organization": "Macau University of Science and Technology", "decisionDate": "2025-05-05", "status": "Red"}, {"documentId": "59737013", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Circuits and Systems Magazine", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-05-05", "status": "Red"}, {"documentId": "59733180", "source": "S1M", "reason": "PAL", "authorName": "Kung, Dr. Sun-Yuan", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "Transactions on Biomedical Engineering", "organization": "Princeton University", "decisionDate": "2025-05-05", "status": "Red"}, {"documentId": "59733991", "source": "S1M", "reason": "PAL", "authorName": "Qiu, Mr. Meikang", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Transactions on Information Forensics & Security", "organization": "Columbia University", "decisionDate": "2025-05-05", "status": "Red"}, {"documentId": "59750713", "source": "S1M", "reason": "PAL", "authorName": "KHALAF, Dr. OSAMAH", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Al-Nahrain University", "decisionDate": "2025-05-05", "status": "Red"}, {"documentId": "59172228", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Circuits and Systems for Video Technology", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-05-02", "status": "Red"}, {"documentId": "59702445", "source": "S1M", "reason": "PAL", "authorName": "Almukadi, Prof. Wafa Sulaiman", "authorEmail": "wsalmukadi@uj.edu", "country": "Not Recorded", "journalName": "IEEE Transactions on Computational Social Systems", "organization": "University of Jeddah", "decisionDate": "2025-05-02", "status": "Red"}, {"documentId": "59580408", "source": "S1M", "reason": "PAL", "authorName": "Shanmugam, Mrs. Leninisha", "authorEmail": "leninisha121@gmail.com", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "Vellore Institute of Technology", "decisionDate": "2025-04-28", "status": "Red"}, {"documentId": "59633546", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Transactions on Green Communications and Networking", "organization": "Universidad de Carabobo", "decisionDate": "2025-04-28", "status": "Red"}, {"documentId": "59568661", "source": "S1M", "reason": "PAL", "authorName": "Fan, Mr. Hui", "authorEmail": "hbdysfh@126.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "State Grid Hebei Electric Power Company", "decisionDate": "2025-04-23", "status": "Red"}, {"documentId": "59449210", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Circuits and Systems for Video Technology", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-04-16", "status": "Red"}, {"documentId": "59454812", "source": "S1M", "reason": "PAL", "authorName": "Khalaf, Dr. Osamah Ibrahim", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "59454582", "source": "S1M", "reason": "PAL", "authorName": "Khalaf, Dr. Osamah Ibrahim", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "59449210", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Circuits and Systems for Video Technology", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "59454812", "source": "S1M", "reason": "PAL", "authorName": "Khalaf, Dr. Osamah Ibrahim", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "59449210", "source": "S1M", "reason": "PAL", "authorName": "Zhu, Dr. Wenwu", "authorEmail": "wwzhu@tsinghua.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Circuits and Systems for Video Technology", "organization": "Tsinghua University Department of Computer Science and Technology", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "59437712", "source": "S1M", "reason": "PAL", "authorName": "Almukadi, Dr. Wafa Sulaiman", "authorEmail": "wsalmukadi@uj.edu", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "University of Jeddah", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "59454582", "source": "S1M", "reason": "PAL", "authorName": "Khalaf, Dr. Osamah Ibrahim", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Al-Nahrain University", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "59420893", "source": "S1M", "reason": "PAL", "authorName": "Al-Kahtani, Dr. Nouf", "authorEmail": "nkalkahtani@iau.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Imam Abdulrahman Bin Faisal University College of Science", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "59397371", "source": "S1M", "reason": "PCL", "authorName": "Giraldo, Dr. Luis Felipe", "authorEmail": "lf.giraldo404@uniandes.edu.co", "country": "Venezuela", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Universidad de Los Andes", "decisionDate": "2025-04-11", "status": "Red"}, {"documentId": "59384174", "source": "S1M", "reason": "PCL", "authorName": "Peraza, Prof. Delgi", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "Journal of Lightwave Technology", "organization": "Universidad de Carabobo", "decisionDate": "2025-04-10", "status": "Red"}, {"documentId": "58276747", "source": "S1M", "reason": "PCL", "authorName": "An, Dr. Yong-Nam", "authorEmail": "yn.an0802@ryongnamsan.edu.kp", "country": "North Korea", "journalName": "Transactions on Ultrasonics, Ferroelectrics, and Frequency Control", "organization": "Kim Il Sung University Pyongyang Medical College", "decisionDate": "2025-04-03", "status": "Red"}, {"documentId": "59290867", "source": "S1M", "reason": "PCL", "authorName": "Valera, Mr. Luis", "authorEmail": "valeraluise@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Magnetics", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-04-03", "status": "Red"}, {"documentId": "59121049", "source": "S1M", "reason": "PCL", "authorName": "Herold-Garcia, Ms. Silena", "authorEmail": "silena@uo.edu.cu", "country": "Venezuela", "journalName": "Transactions on Pattern Analysis and Machine Intelligence", "organization": "Universidad de Oriente", "decisionDate": "2025-04-02", "status": "Red"}, {"documentId": "59046395", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd. Asif", "authorEmail": "m.asif@kardan.edu.af", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Kardan University", "decisionDate": "2025-04-02", "status": "Red"}, {"documentId": "59046395", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd. Asif", "authorEmail": "m.asif@kardan.edu.af", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Kardan University", "decisionDate": "2025-04-01", "status": "Red"}, {"documentId": "58940678", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd. Asif", "authorEmail": "m.asif@kardan.edu.af", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Kardan University", "decisionDate": "2025-04-01", "status": "Red"}, {"documentId": "59258590", "source": "S1M", "reason": "PAL", "authorName": "Shah, Dr. Mohd. Asif", "authorEmail": "m.asif@kardan.edu.af", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Kardan University", "decisionDate": "2025-04-01", "status": "Red"}, {"documentId": "59243746", "source": "S1M", "reason": "PAL", "authorName": "Taleb-Ahmed, Prof. Abdelmalik", "authorEmail": "abdelmalik.taleb-ahmed@uphf.fr", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Universite Polytechnique Hauts-de-France", "decisionDate": "2025-03-31", "status": "Red"}, {"documentId": "59236277", "source": "S1M", "reason": "PAL", "authorName": "Kim, Dr. Tai-hoon", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Transactions on Affective Computing", "organization": "Chonnam National University - Yeosu Campus", "decisionDate": "2025-03-31", "status": "Red"}, {"documentId": "59206121", "source": "S1M", "reason": "PAL", "authorName": "Alkahtani, Dr. Hend Khalid", "authorEmail": "hkalqahtani@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-03-28", "status": "Red"}, {"documentId": "59065080", "source": "S1M", "reason": "PCL", "authorName": "Vera, Dr. Miguel", "authorEmail": "miguel.vera@unisimon.edu.co", "country": "Venezuela", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-03-24", "status": "Red"}, {"documentId": "59140828", "source": "S1M", "reason": "PAL", "authorName": "LI, Mr. Tianhui", "authorEmail": "373398825@qq.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "State Grid Hebei Electric Power Co Ltd Electric Power Research Institute", "decisionDate": "2025-03-24", "status": "Red"}, {"documentId": "59065080", "source": "S1M", "reason": "PCL", "authorName": "Vera, Dr. Miguel", "authorEmail": "miguel.vera@unisimon.edu.co", "country": "Venezuela", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-03-21", "status": "Red"}, {"documentId": "59065080", "source": "S1M", "reason": "PCL", "authorName": "Vera, Dr. Miguel", "authorEmail": "miguel.vera@unisimon.edu.co", "country": "Venezuela", "journalName": "IEEE Transactions on Neural Networks and Learning Systems", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-03-19", "status": "Red"}, {"documentId": "59061617", "source": "S1M", "reason": "PAL", "authorName": "ZHEN, Prof. Tong", "authorEmail": "13703950124@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Henan University of Technology School of Information Science and Engineering", "decisionDate": "2025-03-19", "status": "Red"}, {"documentId": "59012279", "source": "S1M", "reason": "PAL", "authorName": "Almukadi, Dr. Wafa Sulaiman", "authorEmail": "wsalmukadi@uj.edu", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "University of Jeddah", "decisionDate": "2025-03-17", "status": "Red"}, {"documentId": "58943555", "source": "S1M", "reason": "PCL", "authorName": "Garcia-Sanchez, Dr. Francisco J.", "authorEmail": "fgarcia@ieee.org", "country": "Venezuela", "journalName": "Journal of Photovoltaics", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-03-11", "status": "Red"}, {"documentId": "58947825", "source": "S1M", "reason": "PAL", "authorName": "Aljohani, Dr. Abeer", "authorEmail": "aahjohani@taibahu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "Taibah University", "decisionDate": "2025-03-11", "status": "Red"}, {"documentId": "57600606", "source": "S1M", "reason": "PCL", "authorName": "Chung, Dr Joon Son", "authorEmail": "joonson@kaist.ac.kr", "country": "North Korea", "journalName": "IEEE Transactions on Multimedia", "organization": "KAIST", "decisionDate": "2025-03-07", "status": "Red"}, {"documentId": "58803176", "source": "S1M", "reason": "PCL", "authorName": "Perez, Nelson", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Los Andes", "decisionDate": "2025-03-06", "status": "Red"}, {"documentId": "58803176", "source": "S1M", "reason": "PCL", "authorName": "Perez, Nelson", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Los Andes", "decisionDate": "2025-03-05", "status": "Red"}, {"documentId": "58831185", "source": "S1M", "reason": "PAL", "authorName": "Kim, Prof. Tai Hoon", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Transactions on Intelligent Transportation Systems", "organization": "Chonnam National University", "decisionDate": "2025-03-03", "status": "Red"}, {"documentId": "58803176", "source": "S1M", "reason": "PCL", "authorName": "Perez, Nelson", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Los Andes", "decisionDate": "2025-03-03", "status": "Red"}, {"documentId": "58750681", "source": "S1M", "reason": "PAL", "authorName": "Almujally, Dr. Nouf Abdullah", "authorEmail": "naalmujally@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-02-26", "status": "Red"}, {"documentId": "58713561", "source": "S1M", "reason": "PAL", "authorName": "Kousar, Miss Tanzeela", "authorEmail": "tanzeela.kousar@wum.edu.pk", "country": "Not Recorded", "journalName": "Journal of Selected Topics in Applied Earth Observations and Remote Sensing", "organization": "The Women University Multan", "decisionDate": "2025-02-24", "status": "Red"}, {"documentId": "58680054", "source": "S1M", "reason": "PAL", "authorName": "Cheng, Dr. Bing", "authorEmail": "xmuchengbing@stu.xmu.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Power Electronics", "organization": "Xiamen University", "decisionDate": "2025-02-21", "status": "Red"}, {"documentId": "58421008", "source": "S1M", "reason": "PAL", "authorName": "Almujally, Dr. Nouf Abdullah", "authorEmail": "naalmujaly@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-02-20", "status": "Red"}, {"documentId": "57952917", "source": "S1M", "reason": "PAL", "authorName": "Kim, Prof. Tai Hoon", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Chonnam National University", "decisionDate": "2025-02-20", "status": "Red"}, {"documentId": "57952917", "source": "S1M", "reason": "PAL", "authorName": "Kim, Prof. Tai Hoon", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Chonnam National University", "decisionDate": "2025-02-19", "status": "Red"}, {"documentId": "58637311", "source": "S1M", "reason": "PAL", "authorName": "Varnasi, Dr. Aruna", "authorEmail": "varanasi.aruna2022@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Sreenidhi Institute of Science and Technology", "decisionDate": "2025-02-19", "status": "Red"}, {"documentId": "58579528", "source": "S1M", "reason": "PAL", "authorName": "Sagar, Dr. P Vidya", "authorEmail": "pvsagar20@gmail.com", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-02-14", "status": "Red"}, {"documentId": "58540719", "source": "S1M", "reason": "PAL", "authorName": "ghadi, Dr. yazeed ghadi", "authorEmail": "yazeed.ghadi@aau.ac.ae", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Al Ain University", "decisionDate": "2025-02-12", "status": "Red"}, {"documentId": "58518083", "source": "S1M", "reason": "PAL", "authorName": "Elwi, Dr. Taha A.", "authorEmail": "taelwi82@gmail.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "US Embassy and Consulate in Iraq", "decisionDate": "2025-02-11", "status": "Red"}, {"documentId": "58505813", "source": "S1M", "reason": "PAL", "authorName": "Paul, Prof. Anand", "authorEmail": "paul.editor@gmail.com", "country": "Not Recorded", "journalName": "Transactions on Geoscience and Remote Sensing", "organization": "Kyungpook National University", "decisionDate": "2025-02-11", "status": "Red"}, {"documentId": "58503884", "source": "S1M", "reason": "PAL", "authorName": "Almujally, Dr. Nouf Abdullah", "authorEmail": "nalmujaly@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-02-10", "status": "Red"}, {"documentId": "58481877", "source": "S1M", "reason": "PAL", "authorName": "Almujally, Dr. Nouf Abdullah", "authorEmail": "naalmujaly@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-02-10", "status": "Red"}, {"documentId": "58456877", "source": "S1M", "reason": "PAL", "authorName": "Mazroa, Dr. Alanoud Al", "authorEmail": "asalmazroa@pnu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Sensors Journal", "organization": "Princess Nourah bint Abdulrahman University College of Computer and Information Sciences", "decisionDate": "2025-02-06", "status": "Red"}, {"documentId": "58367140", "source": "S1M", "reason": "PCL", "authorName": "Cheboxarov, Dr. Victor V.", "authorEmail": "vchebox@gmail.com", "country": "Crimea", "journalName": "IEEE Transactions on Reliability", "organization": "Sevastopol State University", "decisionDate": "2025-01-30", "status": "Red"}, {"documentId": "58329604", "source": "S1M", "reason": "PAL", "authorName": "ZHEN, Prof. Tong", "authorEmail": "13703950124@163.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Henan University of Technology School of Information Science and Engineering", "decisionDate": "2025-01-28", "status": "Red"}, {"documentId": "58332969", "source": "S1M", "reason": "PCL", "authorName": "Moronta, Dr. Jose", "authorEmail": "jmoronta@gmail.com", "country": "Venezuela", "journalName": "IEEE Transactions on Reliability", "organization": "Universidad Simon Bolivar", "decisionDate": "2025-01-28", "status": "Red"}, {"documentId": "57654397", "source": "S1M", "reason": "PAL", "authorName": "Alrasheedi, Prof. Adel Fahad", "authorEmail": "aalrasheedi@ksu.edu.sa", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "King Saud University Statistics & Operations Research Department", "decisionDate": "2025-01-28", "status": "Red"}, {"documentId": "58276747", "source": "S1M", "reason": "PCL", "authorName": "Kang, Ms Un-Im", "authorEmail": "cioc4@ryongnamsan.edu.kp", "country": "North Korea", "journalName": "Transactions on Ultrasonics, Ferroelectrics, and Frequency Control", "organization": "Kim Il Sung University Pyongyang Medical College", "decisionDate": "2025-01-23", "status": "Red"}, {"documentId": "58272179", "source": "S1M", "reason": "PAL", "authorName": "Majeed, Dr. Fiaz", "authorEmail": "fiaz.majeed@uog.edu.pk", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "University of Gujrat", "decisionDate": "2025-01-23", "status": "Red"}, {"documentId": "58235499", "source": "S1M", "reason": "PAL", "authorName": "Li, Prof. Xiaoyong", "authorEmail": "lixiaoyong@bupt.edu.cn", "country": "Not Recorded", "journalName": "Transactions on Knowledge and Data Engineering", "organization": "Beijing University of Posts and Telecommunications School of Cyberspace Security", "decisionDate": "2025-01-21", "status": "Red"}, {"documentId": "58228576", "source": "S1M", "reason": "PAL", "authorName": "Kung, Prof. Sun-Yuan", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "Princeton University Department of Electrical and Computer Engineering", "decisionDate": "2025-01-20", "status": "Red"}, {"documentId": "58096704", "source": "S1M", "reason": "PCL", "authorName": "Moreno, Prof. Carlos M", "authorEmail": "carlosmanuel.moreno.ucvv@gmail.com", "country": "Venezuela", "journalName": "IEEE Sensors Journal", "organization": "Universidad Central de Venezuela", "decisionDate": "2025-01-20", "status": "Red"}, {"documentId": "58135543", "source": "S1M", "reason": "PAL", "authorName": "Alharbi, Dr. Meshal", "authorEmail": "mg.alharbi@psau.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Prince Sattam bin Abdulaziz University College of Computer Science and Engineering", "decisionDate": "2025-01-17", "status": "Red"}, {"documentId": "58135543", "source": "S1M", "reason": "PAL", "authorName": "Alharbi, Dr. Meshal", "authorEmail": "mg.alharbi@psau.edu.sa", "country": "Not Recorded", "journalName": "Transactions on Consumer Electronics", "organization": "Prince Sattam bin Abdulaziz University College of Computer Science and Engineering", "decisionDate": "2025-01-16", "status": "Red"}, {"documentId": "58160848", "source": "S1M", "reason": "PAL", "authorName": "Villar, Prof. M\u00f3nica Gracia", "authorEmail": "monica.gracia@uneatlantico.es", "country": "Not Recorded", "journalName": "IEEE Journal of Biomedical and Health Informatics", "organization": "Universidad Europea del Atlantico", "decisionDate": "2025-01-16", "status": "Red"}, {"documentId": "58157366", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "003150@nuist.edu.cn", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-01-16", "status": "Red"}, {"documentId": "58152115", "source": "S1M", "reason": "PCL", "authorName": "Rocco, Dr. Claudio M", "authorEmail": "croccoucv@gmail.com", "country": "Venezuela", "journalName": "IEEE Systems Journal", "organization": "Universidad Central de Venezuela", "decisionDate": "2025-01-15", "status": "Red"}, {"documentId": "58157366", "source": "S1M", "reason": "PAL", "authorName": "Pan, Prof. Chengsheng", "authorEmail": "003150@nuist.edu.cn", "country": "Not Recorded", "journalName": "IEEE Internet of Things Journal", "organization": "Nanjing University of Information Science and Technology", "decisionDate": "2025-01-15", "status": "Red"}, {"documentId": "58096704", "source": "S1M", "reason": "PCL", "authorName": "Moreno, Prof. Carlos M", "authorEmail": "carlosmanuel.moreno.ucvv@gmail.com", "country": "Venezuela", "journalName": "IEEE Sensors Journal", "organization": "Universidad Central de Venezuela", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "57998845", "source": "S1M", "reason": "PAL", "authorName": "Li, Prof. Jingbin", "authorEmail": "lijingbin@shzu.edu.cn", "country": "Not Recorded", "journalName": "Journal of Selected Topics in Applied Earth Observations and Remote Sensing", "organization": "Shihezi University", "decisionDate": "2025-01-06", "status": "Red"}, {"documentId": "57983323", "source": "S1M", "reason": "PCL", "authorName": "Perez, Nelson", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "IEEE Access", "organization": "Universidad de Los Andes", "decisionDate": "2025-01-02", "status": "Red"}, {"documentId": "57975330", "source": "S1M", "reason": "PAL", "authorName": "she, Mr. liang", "authorEmail": "sl@hutb.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Computational Social Systems", "organization": "Hunan University of Technology and Business", "decisionDate": "2025-01-02", "status": "Red"}, {"documentId": "57981072", "source": "S1M", "reason": "PAL", "authorName": "Li, Prof. Jingbin", "authorEmail": "lijingbin@shzu.edu.cn", "country": "Not Recorded", "journalName": "Journal of Selected Topics in Applied Earth Observations and Remote Sensing", "organization": "Shihezi University", "decisionDate": "2025-01-02", "status": "Red"}, {"documentId": "57964032", "source": "S1M", "reason": "PAL", "authorName": "XU, Mr. ZHONGPING", "authorEmail": "xuzhongping_2024@126.com", "country": "Not Recorded", "journalName": "IEEE Access", "organization": "Beijing FibrLink Communications Co Ltd", "decisionDate": "2025-01-01", "status": "Red"}, {"documentId": "57975330", "source": "S1M", "reason": "PAL", "authorName": "she, Mr. liang", "authorEmail": "sl@hutb.edu.cn", "country": "Not Recorded", "journalName": "IEEE Transactions on Computational Social Systems", "organization": "Hunan University of Technology and Business", "decisionDate": "2025-01-01", "status": "Red"}, {"documentId": "11319361", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Qingdao Academy of Intelligent Industries", "decisionDate": "2025-12-31", "status": "Red"}, {"documentId": "11194096", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-30", "status": "Red"}, {"documentId": "11153723", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Liaocheng University", "decisionDate": "2025-12-30", "status": "Red"}, {"documentId": "11303964", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "11309387", "source": "IDAMS", "reason": "PAL", "authorName": "Mahmoud Ahmad Al-Khasawneh", "authorEmail": "mahmoud@outlook.my", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "School of Computing", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "11226855", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "11226855", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "11311728", "source": "IDAMS", "reason": "PCL", "authorName": "Sajo-Bohus Laszlo", "authorEmail": "lsajo@usb.ve", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad Sim\u00f3n Bol\u00edvar Valle de Sartenejas", "decisionDate": "2025-12-26", "status": "Red"}, {"documentId": "11298757", "source": "IDAMS", "reason": "PAL", "authorName": "Minh-Tam Nguyen", "authorEmail": "tamnm@hcmute.edu.vn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Ho Chi Minh City University of Technology and Education", "decisionDate": "2025-12-23", "status": "Red"}, {"documentId": "11304322", "source": "IDAMS", "reason": "PCL", "authorName": "Ruben Medina", "authorEmail": "ruben.djmedina@ieee.org", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-12-23", "status": "Red"}, {"documentId": "11297256", "source": "IDAMS", "reason": "PAL", "authorName": "Sunil Kumar", "authorEmail": "drskumar.cs@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "GLA University", "decisionDate": "2025-12-22", "status": "Red"}, {"documentId": "11290751", "source": "IDAMS", "reason": "PAL", "authorName": "Weiwei Lin", "authorEmail": "1826618427@qq.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Institute of Economic and Technology of State Grid Fujian Electric Power Co.", "decisionDate": "2025-12-19", "status": "Red"}, {"documentId": "11303964", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-12-18", "status": "Red"}, {"documentId": "11291746", "source": "IDAMS", "reason": "PAL", "authorName": "Osamah Ibrahim Khalaf", "authorEmail": "usama81818@nahrainuniv.edu.iq", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Al-Nahrain University", "decisionDate": "2025-12-18", "status": "Red"}, {"documentId": "11219225", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Institute of Automation", "decisionDate": "2025-12-17", "status": "Red"}, {"documentId": "11295539", "source": "IDAMS", "reason": "PAL", "authorName": "Rajendra B. Mohite", "authorEmail": "rajendra.b.mohite@bharatividyapeeth.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Bharati Vidyapeeth College of Engineering", "decisionDate": "2025-12-17", "status": "Red"}, {"documentId": "11280639", "source": "IDAMS", "reason": "PAL", "authorName": "E. Mohan", "authorEmail": "emohan1971@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "SIMATS", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "11222908", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santoshrus@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "11220197", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-15", "status": "Red"}, {"documentId": "10720750", "source": "IDAMS", "reason": "PAL", "authorName": "Wahida Mansouri", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Northern Border University", "decisionDate": "2025-12-12", "status": "Red"}, {"documentId": "11284161", "source": "IDAMS", "reason": "PAL", "authorName": "Priyanka Paygude", "authorEmail": "pspaygude@bvucoep.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Bharati Vidyapeeth (Deemed to be University)", "decisionDate": "2025-12-11", "status": "Red"}, {"documentId": "11276437", "source": "IDAMS", "reason": "PCL", "authorName": "P. M. Vetoshko", "authorEmail": "", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-12-10", "status": "Red"}, {"documentId": "11273932", "source": "IDAMS", "reason": "PAL", "authorName": "Yichao Zou", "authorEmail": "2952782902@qq.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Research Institute of State Grid Fujian Electric Company", "decisionDate": "2025-12-10", "status": "Red"}, {"documentId": "10978008", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de technologie sup\u00e9rieure", "decisionDate": "2025-12-10", "status": "Red"}, {"documentId": "11276324", "source": "IDAMS", "reason": "PCL", "authorName": "P. M. Vetoshko", "authorEmail": "", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-12-09", "status": "Red"}, {"documentId": "11275063", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ultra-tcs.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Ultra Intelligence & Communications", "decisionDate": "2025-12-09", "status": "Red"}, {"documentId": "11276560", "source": "IDAMS", "reason": "PCL", "authorName": "P. M. Vetoshko", "authorEmail": "", "country": "Crimea", "journalName": "Not Recorded", "organization": "V. I. Vernadsky Crimean Federal University", "decisionDate": "2025-12-08", "status": "Red"}, {"documentId": "11276560", "source": "IDAMS", "reason": "PCL", "authorName": "P. M. Vetoshko", "authorEmail": "", "country": "Crimea", "journalName": "Not Recorded", "organization": "V. I. Vernadsky Crimean Federal University", "decisionDate": "2025-12-08", "status": "Red"}, {"documentId": "11276809", "source": "IDAMS", "reason": "PAL", "authorName": "Mihai Sanduleanu", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Khalifa University of Science and Technology", "decisionDate": "2025-12-08", "status": "Red"}, {"documentId": "11212834", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-12-03", "status": "Red"}, {"documentId": "11271392", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "The DeSci Center of Parallel Intelligence", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "11081886", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "The University of Chinese Academy of Sciences", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "11271381", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Institute of Automation", "decisionDate": "2025-12-02", "status": "Red"}, {"documentId": "11266249", "source": "IDAMS", "reason": "PAL", "authorName": "Syeda Fizzah Jilani", "authorEmail": "sfj7@aber.ac.uk", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Aberystwyth University", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11266300", "source": "IDAMS", "reason": "PAL", "authorName": "Syeda Fizzah Jilani", "authorEmail": "sfj7@aber.ac.uk", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Physical Sciences Building", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11256675", "source": "IDAMS", "reason": "PAL", "authorName": "E. Mohan", "authorEmail": "emohan1971@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "SIMATS", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11271381", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Institute of Automation", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11256561", "source": "IDAMS", "reason": "PAL", "authorName": "E. Mohan", "authorEmail": "emohan1971@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Saveetha School of Engineering", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11271601", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.casia@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Chinese Academy of Sciences", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11271392", "source": "IDAMS", "reason": "PAL", "authorName": "Fei-Yue Wang", "authorEmail": "feiyue.wang@ia.ac.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "The DeSci Center of Parallel Intelligence", "decisionDate": "2025-12-01", "status": "Red"}, {"documentId": "11257958", "source": "IDAMS", "reason": "PAL", "authorName": "Prakash Devale", "authorEmail": "prdevale@bvucoep.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Bharati Vidyapeeth (Deemed to be) University", "decisionDate": "2025-11-27", "status": "Red"}, {"documentId": "11252558", "source": "IDAMS", "reason": "PAL", "authorName": "Veerendra D", "authorEmail": "veerendra.gndec@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.N.D. Engineering College", "decisionDate": "2025-11-27", "status": "Red"}, {"documentId": "11098904", "source": "IDAMS", "reason": "PAL", "authorName": "Sun-Yuan Kung", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princeton University", "decisionDate": "2025-11-26", "status": "Red"}, {"documentId": "11260995", "source": "IDAMS", "reason": "PCL", "authorName": "Adelmo Ortiz Conde", "authorEmail": "ortizc@usb.ve", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad Sim\u00f3n Bol\u00edvar", "decisionDate": "2025-11-26", "status": "Red"}, {"documentId": "11256180", "source": "IDAMS", "reason": "PCL", "authorName": "Agustin Mejias", "authorEmail": "amejiasa@uc.edu.ve", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Carabobo", "decisionDate": "2025-11-24", "status": "Red"}, {"documentId": "11267140", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-24", "status": "Red"}, {"documentId": "11255703", "source": "IDAMS", "reason": "PCL", "authorName": "I.N. Poluyanova", "authorEmail": "pin@tavrida.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Switchgear design bureau LTD", "decisionDate": "2025-11-24", "status": "Red"}, {"documentId": "11264427", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-21", "status": "Red"}, {"documentId": "11243261", "source": "IDAMS", "reason": "PAL", "authorName": "Arpita Soni", "authorEmail": "soni.arpita@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Eudoxia Research University", "decisionDate": "2025-11-21", "status": "Red"}, {"documentId": "11238259", "source": "IDAMS", "reason": "PCL", "authorName": "Nelson A. Perez-Garcia", "authorEmail": "perezn@ula.ve", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Postgrado en Telecomunicaciones", "decisionDate": "2025-11-18", "status": "Red"}, {"documentId": "11250742", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Liaocheng University", "decisionDate": "2025-11-17", "status": "Red"}, {"documentId": "11238761", "source": "IDAMS", "reason": "PCL", "authorName": "Osmar J. Uzcategui Hernandez", "authorEmail": "osmaruzcategui1997@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes (ULA)", "decisionDate": "2025-11-17", "status": "Red"}, {"documentId": "11160690", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-14", "status": "Red"}, {"documentId": "11202329", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Centre of Excellence for Nanotechnology", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "11202374", "source": "IDAMS", "reason": "PAL", "authorName": "Santosh Kumar", "authorEmail": "santosh@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "11232925", "source": "IDAMS", "reason": "PAL", "authorName": "Mohd Asif Shah", "authorEmail": "ohaasif@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "University Centre for Research & Development", "decisionDate": "2025-11-13", "status": "Red"}, {"documentId": "11018664", "source": "IDAMS", "reason": "PAL", "authorName": "M. A. Al-Khasawneh", "authorEmail": "mahmoudalkhasawneh@outlook.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Al-Ahliyya Amman University", "decisionDate": "2025-11-12", "status": "Red"}, {"documentId": "11228492", "source": "IDAMS", "reason": "PAL", "authorName": "Ruoyu Li", "authorEmail": "ruoyuli.cs.scu@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sichuan University", "decisionDate": "2025-11-12", "status": "Red"}, {"documentId": "11227467", "source": "IDAMS", "reason": "PCL", "authorName": "Marina Rudenko", "authorEmail": "", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-11-10", "status": "Red"}, {"documentId": "11226760", "source": "IDAMS", "reason": "PAL", "authorName": "Wei Song", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Applied Technology College of Soochow University", "decisionDate": "2025-11-07", "status": "Red"}, {"documentId": "10931828", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-10-30", "status": "Red"}, {"documentId": "11211683", "source": "IDAMS", "reason": "PAL", "authorName": "Thirtamara Seshaiyer Rajeswari", "authorEmail": "kashyapnidhiraj@kluniversity.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Koneru Lakshmaiah Education Foundation", "decisionDate": "2025-10-28", "status": "Red"}, {"documentId": "11212341", "source": "IDAMS", "reason": "PAL", "authorName": "A. Parimala", "authorEmail": "pari.jes88@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Dhanalakshmi Srinivasan Engineering College", "decisionDate": "2025-10-28", "status": "Red"}, {"documentId": "11209817", "source": "IDAMS", "reason": "PAL", "authorName": "Ruoyu Li", "authorEmail": "2022141460358@stu.scu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sichuan University", "decisionDate": "2025-10-27", "status": "Red"}, {"documentId": "11205706", "source": "IDAMS", "reason": "PCL", "authorName": "Edgar Chacon", "authorEmail": "echacon@ula.ve", "country": "Venezuela", "journalName": "Not Recorded", "organization": "University of Los Andes", "decisionDate": "2025-10-20", "status": "Red"}, {"documentId": "11206976", "source": "IDAMS", "reason": "PAL", "authorName": "Ainur Akhmediyarova", "authorEmail": "aat.78@mail.ru", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Satbayev University", "decisionDate": "2025-10-20", "status": "Red"}, {"documentId": "11202186", "source": "IDAMS", "reason": "PAL", "authorName": "Ihtisham Ul Haq", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "University of Calabria", "decisionDate": "2025-10-13", "status": "Red"}, {"documentId": "11188569", "source": "IDAMS", "reason": "PAL", "authorName": "Jianxin Feng", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "School of Information Engineering", "decisionDate": "2025-10-09", "status": "Red"}, {"documentId": "11028903", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de technologie sup\u00e9rieure", "decisionDate": "2025-10-08", "status": "Red"}, {"documentId": "11078429", "source": "IDAMS", "reason": "PAL", "authorName": "Tai-Hoon Kim", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Chonnam National University", "decisionDate": "2025-10-07", "status": "Red"}, {"documentId": "11185493", "source": "IDAMS", "reason": "PAL", "authorName": "Farhad Rachidi", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole Polytechnique F\u00e9d\u00e9rale de Lausanne (EPFL)", "decisionDate": "2025-10-07", "status": "Red"}, {"documentId": "10964778", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-10-07", "status": "Red"}, {"documentId": "10964778", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-10-06", "status": "Red"}, {"documentId": "10964778", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-09-24", "status": "Red"}, {"documentId": "11165840", "source": "IDAMS", "reason": "PCL", "authorName": "Oleg Gabrielyan", "authorEmail": "gabroleg@mail.ru", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-09-23", "status": "Red"}, {"documentId": "11168704", "source": "IDAMS", "reason": "PAL", "authorName": "V. Mohanraj", "authorEmail": "mohanrajv@sonatech.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sona College of Technology", "decisionDate": "2025-09-19", "status": "Red"}, {"documentId": "11160317", "source": "IDAMS", "reason": "PAL", "authorName": "Qian Li", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "SouthWest Petroleum University", "decisionDate": "2025-09-17", "status": "Red"}, {"documentId": "11156286", "source": "IDAMS", "reason": "PAL", "authorName": "D. Stalin David", "authorEmail": "sdstalindavid707@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Vel Tech Multi Tech Dr. Rangarajan Dr. Sakunthala Engineering College", "decisionDate": "2025-09-16", "status": "Red"}, {"documentId": "11160408", "source": "IDAMS", "reason": "PAL", "authorName": "Xin Ai", "authorEmail": "aixin@ncepu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "North China Electric Power University", "decisionDate": "2025-09-16", "status": "Red"}, {"documentId": "11157687", "source": "IDAMS", "reason": "PAL", "authorName": "Amin Al Ka'bi", "authorEmail": "a.kabi@au.edu.kw", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Australian University", "decisionDate": "2025-09-16", "status": "Red"}, {"documentId": "11160260", "source": "IDAMS", "reason": "PAL", "authorName": "Md. Mahbubur Rahman", "authorEmail": "mmrmbstu@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "BUBT", "decisionDate": "2025-09-15", "status": "Red"}, {"documentId": "11156611", "source": "IDAMS", "reason": "PAL", "authorName": "D. Stalin David", "authorEmail": "sdstalindavid707@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Vel Tech Multi Tech Dr. Rangarajan Dr. Sakunthala Engineering College", "decisionDate": "2025-09-15", "status": "Red"}, {"documentId": "11155458", "source": "IDAMS", "reason": "PAL", "authorName": "Ping Hu", "authorEmail": "hp@he.sgcc.com.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "State Grid Hebei Electric Power Co.", "decisionDate": "2025-09-12", "status": "Red"}, {"documentId": "11157780", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Applied Science", "decisionDate": "2025-09-10", "status": "Red"}, {"documentId": "11152202", "source": "IDAMS", "reason": "PAL", "authorName": "Ruoyu Li", "authorEmail": "2022141460358@stu.scu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sichuan University", "decisionDate": "2025-09-09", "status": "Red"}, {"documentId": "11143601", "source": "IDAMS", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "FACYT", "decisionDate": "2025-09-03", "status": "Red"}, {"documentId": "11137006", "source": "IDAMS", "reason": "PAL", "authorName": "Denis Pustokhin", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Financial University under the Government of the Russian Federation", "decisionDate": "2025-09-03", "status": "Red"}, {"documentId": "11143630", "source": "IDAMS", "reason": "PCL", "authorName": "Wendy Maita", "authorEmail": "wendymaita02@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad Metropolina", "decisionDate": "2025-09-02", "status": "Red"}, {"documentId": "11142743", "source": "IDAMS", "reason": "PCL", "authorName": "Pablo Arriaga", "authorEmail": "pabloarriagamata@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Siemens Energy S.A.", "decisionDate": "2025-08-28", "status": "Red"}, {"documentId": "11130184", "source": "IDAMS", "reason": "PAL", "authorName": "Xiaoman Liu", "authorEmail": "4358@pdsu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Pingdingshan University", "decisionDate": "2025-08-28", "status": "Red"}, {"documentId": "11143601", "source": "IDAMS", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "University of Carabobo", "decisionDate": "2025-08-28", "status": "Red"}, {"documentId": "11135445", "source": "IDAMS", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "University of Carabobo", "decisionDate": "2025-08-25", "status": "Red"}, {"documentId": "10897831", "source": "IDAMS", "reason": "PAL", "authorName": "Tai Hoon Kim", "authorEmail": "taihoonn@chonnam.ac.kr", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Chonnam National University", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "10938037", "source": "IDAMS", "reason": "PAL", "authorName": "Mahmoud Ahmad Al-Khasawneh", "authorEmail": "mahmoudalkhasawneh@outlook.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Al-Ahliyya Amman University", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "11117603", "source": "IDAMS", "reason": "PAL", "authorName": "Zhenyu Zhan", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "State Grid Henan Electric Power Research Institute", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "11120235", "source": "IDAMS", "reason": "PAL", "authorName": "A. Gayathri", "authorEmail": "gayathribala.sse@saveetha.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Saveetha University", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "10841399", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de technologie sup\u00e9rieure", "decisionDate": "2025-08-18", "status": "Red"}, {"documentId": "11003082", "source": "IDAMS", "reason": "PCL", "authorName": "Nelson A. Perez-Garcia", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de los Andes", "decisionDate": "2025-08-12", "status": "Red"}, {"documentId": "11100513", "source": "IDAMS", "reason": "PAL", "authorName": "Yichao Zou", "authorEmail": "zouyichao@fj.sgcc.com.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "State Grid Fujian Electric Power Economic & Technology Research Institute", "decisionDate": "2025-08-06", "status": "Red"}, {"documentId": "11098904", "source": "IDAMS", "reason": "PAL", "authorName": "Sun-Yuan Kung", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princeton University", "decisionDate": "2025-08-04", "status": "Red"}, {"documentId": "11003082", "source": "IDAMS", "reason": "PCL", "authorName": "Nelson A. Perez-Garcia", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-08-04", "status": "Red"}, {"documentId": "11072133", "source": "IDAMS", "reason": "PCL", "authorName": "Jose Aguilar", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-08-04", "status": "Red"}, {"documentId": "11096662", "source": "IDAMS", "reason": "PCL", "authorName": "Vasiliy Alchakov", "authorEmail": "alchakov@mail.ru", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-07-31", "status": "Red"}, {"documentId": "11098904", "source": "IDAMS", "reason": "PAL", "authorName": "Sun-Yuan Kung", "authorEmail": "kung@princeton.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princeton University", "decisionDate": "2025-07-29", "status": "Red"}, {"documentId": "11091743", "source": "IDAMS", "reason": "PAL", "authorName": "Abdelmalik Taleb-Amhed", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "IEMN Univ. Polytech. Hauts de France", "decisionDate": "2025-07-28", "status": "Red"}, {"documentId": "11088414", "source": "IDAMS", "reason": "PAL", "authorName": "Xin Ai", "authorEmail": "aixin@ncepu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "North China Electric Power University", "decisionDate": "2025-07-28", "status": "Red"}, {"documentId": "11089610", "source": "IDAMS", "reason": "PAL", "authorName": "Angayarkanni S.A", "authorEmail": "angayars@srmist.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "SRM Institute of Science and Technology", "decisionDate": "2025-07-24", "status": "Red"}, {"documentId": "11085180", "source": "IDAMS", "reason": "PAL", "authorName": "Vijay S. Gulhane", "authorEmail": "vijaygulhane27@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sipna College of Engineering & Technology", "decisionDate": "2025-07-24", "status": "Red"}, {"documentId": "11086297", "source": "IDAMS", "reason": "PAL", "authorName": "Nilesh Uke", "authorEmail": "nilesh.uke@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Indira College of Engineering and Management", "decisionDate": "2025-07-21", "status": "Red"}, {"documentId": "11083779", "source": "IDAMS", "reason": "PCL", "authorName": "Claudio M. Rocco", "authorEmail": "croccoucv@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad Central de Venezuela", "decisionDate": "2025-07-21", "status": "Red"}, {"documentId": "11026866", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-07-18", "status": "Red"}, {"documentId": "11076944", "source": "IDAMS", "reason": "PAL", "authorName": "Syeda Meraj Bilfaqih", "authorEmail": "bilfagih@kku.edu.sa", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "King Khalid University", "decisionDate": "2025-07-16", "status": "Red"}, {"documentId": "11039027", "source": "IDAMS", "reason": "PAL", "authorName": "Isabel De la Torre Diez", "authorEmail": "isator@yllera.tel.uva.es", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Isabel Torres 21", "decisionDate": "2025-07-15", "status": "Red"}, {"documentId": "11073331", "source": "IDAMS", "reason": "PAL", "authorName": "Mohammed M Alrashed", "authorEmail": "mohammed.alrashed@kaust.edu.sa", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Prince Sattam Bin Abdulaziz University", "decisionDate": "2025-07-11", "status": "Red"}, {"documentId": "11070585", "source": "IDAMS", "reason": "PAL", "authorName": "Satya Narayan Tripathy", "authorEmail": "snt.cs@buodisha.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Berhampur University", "decisionDate": "2025-07-09", "status": "Red"}, {"documentId": "11061417", "source": "IDAMS", "reason": "PAL", "authorName": "Javed Ali", "authorEmail": "j_ali@wr.iitr.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "IIT Roorkee", "decisionDate": "2025-07-04", "status": "Red"}, {"documentId": "11062043", "source": "IDAMS", "reason": "PCL", "authorName": "Ruben Medina", "authorEmail": "ruben.djmedina@ieee.org", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-07-03", "status": "Red"}, {"documentId": "11051732", "source": "IDAMS", "reason": "PAL", "authorName": "Qiang Zhao", "authorEmail": "zhaoqiang@lnpu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Liaoning Petrochemical University", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "10964778", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "11054230", "source": "IDAMS", "reason": "PCL", "authorName": "Dmitry Valuev", "authorEmail": "dgvaluev@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "10931828", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de Technologie Sup\u00e9rieure", "decisionDate": "2025-07-01", "status": "Red"}, {"documentId": "11052106", "source": "IDAMS", "reason": "PAL", "authorName": "Dushmanta Kumar Das", "authorEmail": "dushmantakumardas29@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "NIT Nagaland", "decisionDate": "2025-06-30", "status": "Red"}, {"documentId": "11026866", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-06-24", "status": "Red"}, {"documentId": "11042565", "source": "IDAMS", "reason": "PAL", "authorName": "Satya Narayan Tripathy", "authorEmail": "snt.cs@buodisha.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Berhampur University", "decisionDate": "2025-06-23", "status": "Red"}, {"documentId": "10960313", "source": "IDAMS", "reason": "PAL", "authorName": "Sahil Garg", "authorEmail": "sahil.garg@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "\u00c9cole de technologie sup\u00e9rieure", "decisionDate": "2025-06-20", "status": "Red"}, {"documentId": "11037876", "source": "IDAMS", "reason": "PCL", "authorName": "Jin Sim Kim", "authorEmail": "kjs0601@star-co.net.kp", "country": "North Korea", "journalName": "Not Recorded", "organization": "International Technology Corporation center", "decisionDate": "2025-06-19", "status": "Red"}, {"documentId": "11037906", "source": "IDAMS", "reason": "PCL", "authorName": "Pyong Gwang Kim", "authorEmail": "kpg0313@star-co.net.kp", "country": "North Korea", "journalName": "Not Recorded", "organization": "Pyongyang University of Computer Technology", "decisionDate": "2025-06-19", "status": "Red"}, {"documentId": "11039708", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-06-18", "status": "Red"}, {"documentId": "11031496", "source": "IDAMS", "reason": "PAL", "authorName": "Angayarkanni S A", "authorEmail": "angayars@srmist.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "SRM Institute of Science and Technology", "decisionDate": "2025-06-17", "status": "Red"}, {"documentId": "11028516", "source": "IDAMS", "reason": "PCL", "authorName": "Igor A. Ermakov", "authorEmail": "ermakovigorrov@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-06-11", "status": "Red"}, {"documentId": "11028370", "source": "IDAMS", "reason": "PCL", "authorName": "A. S. Velilyaev", "authorEmail": "asvelilyaev@mail.sevsu.ru", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-06-11", "status": "Red"}, {"documentId": "11026482", "source": "IDAMS", "reason": "PAL", "authorName": "A. Deepa", "authorEmail": "adeepa.cse@sathyabama.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sathyabama Institute of Science and Technology", "decisionDate": "2025-06-10", "status": "Red"}, {"documentId": "11003999", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-06-09", "status": "Red"}, {"documentId": "10528273", "source": "IDAMS", "reason": "PAL", "authorName": "Ahmed S. Salama", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Future University in Egypt", "decisionDate": "2025-06-09", "status": "Red"}, {"documentId": "11028257", "source": "IDAMS", "reason": "PCL", "authorName": "Irina Yu. Semykina", "authorEmail": "arinasemykina@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Institute of Natural and Technical Systems", "decisionDate": "2025-06-09", "status": "Red"}, {"documentId": "11020153", "source": "IDAMS", "reason": "PAL", "authorName": "Iswarya M M.E.", "authorEmail": "iswarya.cse@sairam.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sri Sairam Engineering College", "decisionDate": "2025-06-06", "status": "Red"}, {"documentId": "11026866", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Dakota State University", "decisionDate": "2025-06-06", "status": "Red"}, {"documentId": "11019720", "source": "IDAMS", "reason": "PAL", "authorName": "Wensong Liu", "authorEmail": "liuwensong@sgepri.sgcc.com.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "NARI Group Corporation (State Grid Electric Power Research Institute Co. Ltd)", "decisionDate": "2025-06-04", "status": "Red"}, {"documentId": "11012199", "source": "IDAMS", "reason": "PAL", "authorName": "Satya Narayan Tripathy", "authorEmail": "snt.cs@buodisha.edu.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Berhampur University", "decisionDate": "2025-05-28", "status": "Red"}, {"documentId": "11011392", "source": "IDAMS", "reason": "PAL", "authorName": "V. Ramkumar", "authorEmail": "vrr.ece@rmkec.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "R.M.K. Engineering College", "decisionDate": "2025-05-26", "status": "Red"}, {"documentId": "11010031", "source": "IDAMS", "reason": "PAL", "authorName": "V. Ramkumar", "authorEmail": "vrr.ece@rmkec.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "R.M.K. Engineering College", "decisionDate": "2025-05-23", "status": "Red"}, {"documentId": "11003082", "source": "IDAMS", "reason": "PCL", "authorName": "Nelson A. Perez-Garcia", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-05-20", "status": "Red"}, {"documentId": "11007197", "source": "IDAMS", "reason": "PCL", "authorName": "Wilmer Malpica", "authorEmail": "wilmer.malpica.ucv@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad Central de Venezuela", "decisionDate": "2025-05-19", "status": "Red"}, {"documentId": "10999908", "source": "IDAMS", "reason": "PAL", "authorName": "Syeda Fizzah Jilani", "authorEmail": "sfj7@aber.ac.uk", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Aberystwyth University", "decisionDate": "2025-05-19", "status": "Red"}, {"documentId": "10999520", "source": "IDAMS", "reason": "PAL", "authorName": "Syeda Fizzah Jilani", "authorEmail": "sfj7@aber.ac.uk", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Aberystwyth University", "decisionDate": "2025-05-19", "status": "Red"}, {"documentId": "11003999", "source": "IDAMS", "reason": "PAL", "authorName": "Meikang Qiu", "authorEmail": "qiumeikang@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Augusta University", "decisionDate": "2025-05-14", "status": "Red"}, {"documentId": "11003082", "source": "IDAMS", "reason": "PCL", "authorName": "Nelson A. Perez-Garcia", "authorEmail": "", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad de Los Andes", "decisionDate": "2025-05-13", "status": "Red"}, {"documentId": "10977861", "source": "IDAMS", "reason": "PCL", "authorName": "Ponomareva Natalia", "authorEmail": "yolkanv@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-05-08", "status": "Red"}, {"documentId": "10985258", "source": "IDAMS", "reason": "PAL", "authorName": "Rachna Sable", "authorEmail": "rachana.sable@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "GHRCEM", "decisionDate": "2025-05-07", "status": "Red"}, {"documentId": "10985981", "source": "IDAMS", "reason": "PCL", "authorName": "Elena I. Shirokova", "authorEmail": "shirokova@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-05-07", "status": "Red"}, {"documentId": "10983965", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-05-07", "status": "Red"}, {"documentId": "10984252", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-05-07", "status": "Red"}, {"documentId": "10985978", "source": "IDAMS", "reason": "PCL", "authorName": "Elena A. Redkina", "authorEmail": "elenaredkina@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-05-07", "status": "Red"}, {"documentId": "10977916", "source": "IDAMS", "reason": "PCL", "authorName": "Vladimir Bondarev", "authorEmail": "bondarev@sevsu.ru", "country": "Crimea", "journalName": "Not Recorded", "organization": "Institute of Information Technologies", "decisionDate": "2025-05-02", "status": "Red"}, {"documentId": "10977870", "source": "IDAMS", "reason": "PCL", "authorName": "Ponomareva Natalia", "authorEmail": "yolkanv@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "Power systems of nuclear power plants", "decisionDate": "2025-04-30", "status": "Red"}, {"documentId": "10968626", "source": "IDAMS", "reason": "PAL", "authorName": "Dushmanta Kumar Das", "authorEmail": "dushmantakumardas29@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "NIT Nagaland", "decisionDate": "2025-04-21", "status": "Red"}, {"documentId": "10969262", "source": "IDAMS", "reason": "PAL", "authorName": "Saleh Mesbah", "authorEmail": "saleh.mesbah@aast.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Arab Academy for Science", "decisionDate": "2025-04-21", "status": "Red"}, {"documentId": "10969369", "source": "IDAMS", "reason": "PAL", "authorName": "Saleh Mesbah Elkaffas", "authorEmail": "saleh.mesbah@aast.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Arab Academy for Science", "decisionDate": "2025-04-21", "status": "Red"}, {"documentId": "10965072", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-04-18", "status": "Red"}, {"documentId": "10965817", "source": "IDAMS", "reason": "PAL", "authorName": "Nouf Abdullah Almujally", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "10458128", "source": "IDAMS", "reason": "PAL", "authorName": "Nouf Abdullah Almujally", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "10960974", "source": "IDAMS", "reason": "PAL", "authorName": "V. Ramkumar", "authorEmail": "vrr.ece@rmkec.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "R.M.K. Engineering College", "decisionDate": "2025-04-15", "status": "Red"}, {"documentId": "10962079", "source": "IDAMS", "reason": "PCL", "authorName": "Daniel Flores", "authorEmail": "eng.djflores@gmail.com", "country": "Venezuela", "journalName": "Not Recorded", "organization": "Universidad del Zulia", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "10961361", "source": "IDAMS", "reason": "PAL", "authorName": "Aniket Kumar", "authorEmail": "21bcs10117@cuchd.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Chandigarh University", "decisionDate": "2025-04-14", "status": "Red"}, {"documentId": "10957670", "source": "IDAMS", "reason": "PAL", "authorName": "Roshan Lal", "authorEmail": "rchhokar@amity.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Amity University", "decisionDate": "2025-04-11", "status": "Red"}, {"documentId": "10941007", "source": "IDAMS", "reason": "PAL", "authorName": "A. Deepa", "authorEmail": "nraj.deepa@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sathyabama Institute of Science and Technology", "decisionDate": "2025-03-31", "status": "Red"}, {"documentId": "10940585", "source": "IDAMS", "reason": "PAL", "authorName": "A. Deepa", "authorEmail": "nraj.deepa@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Sathyabama Institute of Science and Technology", "decisionDate": "2025-03-31", "status": "Red"}, {"documentId": "10929283", "source": "IDAMS", "reason": "PAL", "authorName": "Zheng Wang", "authorEmail": "891984364@qq.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "State Grid Ningxia Electric Power Co.", "decisionDate": "2025-03-24", "status": "Red"}, {"documentId": "10924488", "source": "IDAMS", "reason": "PAL", "authorName": "Meshal Alharbi", "authorEmail": "mg.alharbi@psau.edu.sa", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Prince Sattam bin Abdulaziz University", "decisionDate": "2025-03-20", "status": "Red"}, {"documentId": "10927114", "source": "IDAMS", "reason": "PAL", "authorName": "Oluwafunso O. Osaloni", "authorEmail": "wole_osaloni@yahoo.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Afe Babalola Univerisity Ado-Ekiti", "decisionDate": "2025-03-20", "status": "Red"}, {"documentId": "10935637", "source": "IDAMS", "reason": "PAL", "authorName": "Xin Wang", "authorEmail": "xwang11@fudan.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Fudan University", "decisionDate": "2025-03-20", "status": "Red"}, {"documentId": "10897831", "source": "IDAMS", "reason": "PAL", "authorName": "Tai Hoon Kim", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Chonnam National University", "decisionDate": "2025-03-14", "status": "Red"}, {"documentId": "10557137", "source": "IDAMS", "reason": "PAL", "authorName": "Xiaoyong Li", "authorEmail": "lxyxjtu@163.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Beijing University of Posts and Telecommunications", "decisionDate": "2025-03-13", "status": "Red"}, {"documentId": "10668836", "source": "IDAMS", "reason": "PAL", "authorName": "Bing Cheng", "authorEmail": "xmuchengbing@stu.xmu.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Xiamen University", "decisionDate": "2025-03-13", "status": "Red"}, {"documentId": "10912393", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-03-12", "status": "Red"}, {"documentId": "10900313", "source": "IDAMS", "reason": "PAL", "authorName": "Zhongping Xu", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Beijing Fibrlink Communications Co.", "decisionDate": "2025-03-03", "status": "Red"}, {"documentId": "10870209", "source": "IDAMS", "reason": "PAL", "authorName": "Nouf Abdullah Almujally", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Princess Nourah bint Abdulrahman University", "decisionDate": "2025-03-03", "status": "Red"}, {"documentId": "10891792", "source": "IDAMS", "reason": "PAL", "authorName": "Isabel de la Torre Diez", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "University of Valladolid", "decisionDate": "2025-02-27", "status": "Red"}, {"documentId": "10896182", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni Institute of Engineering and Management", "decisionDate": "2025-02-26", "status": "Red"}, {"documentId": "10536122", "source": "IDAMS", "reason": "PAL", "authorName": "Leilei Cui", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Beijing Jiaotong University", "decisionDate": "2025-02-26", "status": "Red"}, {"documentId": "10896115", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-02-25", "status": "Red"}, {"documentId": "10890209", "source": "IDAMS", "reason": "PAL", "authorName": "Xiaoyong Li", "authorEmail": "lixiaoyong@bupt.edu.cn", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Beijing University of Posts and Telecommunications", "decisionDate": "2025-02-24", "status": "Red"}, {"documentId": "10872094", "source": "IDAMS", "reason": "PAL", "authorName": "Rajesh Singh", "authorEmail": "drajeshsingh004@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Uttaranchal University", "decisionDate": "2025-02-19", "status": "Red"}, {"documentId": "10883285", "source": "IDAMS", "reason": "PAL", "authorName": "Zhenda Hu", "authorEmail": "huzhenda@hotmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "State Grid Fujian Electric Power Co.", "decisionDate": "2025-02-18", "status": "Red"}, {"documentId": "10881750", "source": "IDAMS", "reason": "PAL", "authorName": "J. Christopher Clement", "authorEmail": "christopher.clement@vit.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Vellore Institute of Technology", "decisionDate": "2025-02-17", "status": "Red"}, {"documentId": "10877482", "source": "IDAMS", "reason": "PAL", "authorName": "Rajesh Singh", "authorEmail": "rajeshsingh@uttaranchaluniversity.ac.in", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Uttaranchal University", "decisionDate": "2025-02-14", "status": "Red"}, {"documentId": "10877364", "source": "IDAMS", "reason": "PAL", "authorName": "Taha A. Elwi", "authorEmail": "taelwi82@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "International Applied and Theoretical", "decisionDate": "2025-02-14", "status": "Red"}, {"documentId": "10874958", "source": "IDAMS", "reason": "PCL", "authorName": "Svetlana Volkova", "authorEmail": "svolkovav2017@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "State Budget Education Institution of Higher Education of the Republic of Crimea Crimean Engineering and Pedagogical University the Name of Fevzi Yakubov", "decisionDate": "2025-02-13", "status": "Red"}, {"documentId": "10874997", "source": "IDAMS", "reason": "PCL", "authorName": "Svetlana Volkova", "authorEmail": "svolkovav2017@gmail.com", "country": "Crimea", "journalName": "Not Recorded", "organization": "University the Name of Fevzi Yakubov", "decisionDate": "2025-02-13", "status": "Red"}, {"documentId": "10886949", "source": "IDAMS", "reason": "PAL", "authorName": "Shtwai Alsubai", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Prince Sattam bin Abdulaziz University", "decisionDate": "2025-02-13", "status": "Red"}, {"documentId": "10877018", "source": "IDAMS", "reason": "PAL", "authorName": "Gamal Abd El-Nasser A. Said", "authorEmail": "jamalabdelnasser@hotmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Port Training Institute. (PTI) AASTMT", "decisionDate": "2025-02-13", "status": "Red"}, {"documentId": "10871677", "source": "IDAMS", "reason": "PCL", "authorName": "Chol Min Pong", "authorEmail": "pcm0601@star-co.net.kp", "country": "North Korea", "journalName": "Not Recorded", "organization": "Pyongyang University of Science and Technology", "decisionDate": "2025-02-11", "status": "Red"}, {"documentId": "10867462", "source": "IDAMS", "reason": "PCL", "authorName": "Igor B. Shirokov", "authorEmail": "shirokov@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-02-11", "status": "Red"}, {"documentId": "10867732", "source": "IDAMS", "reason": "PCL", "authorName": "Elena I. Shirokova", "authorEmail": "shirokova@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-02-10", "status": "Red"}, {"documentId": "10584555", "source": "IDAMS", "reason": "PAL", "authorName": "Bing Cheng", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Xiamen University", "decisionDate": "2025-02-07", "status": "Red"}, {"documentId": "10860211", "source": "IDAMS", "reason": "PAL", "authorName": "A Gayathri", "authorEmail": "gaybalahari.sse@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Saveetha School of Engineering", "decisionDate": "2025-02-04", "status": "Red"}, {"documentId": "10869976", "source": "IDAMS", "reason": "PAL", "authorName": "Xiushan Zhang", "authorEmail": "xiu3zh@139.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "UNC Wilmington", "decisionDate": "2025-02-03", "status": "Red"}, {"documentId": "10869975", "source": "IDAMS", "reason": "PAL", "authorName": "George Adrian Maxim", "authorEmail": "adrainmaxim@ieee.org", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Universitat Pompeu Fabra", "decisionDate": "2025-02-03", "status": "Red"}, {"documentId": "10863940", "source": "IDAMS", "reason": "PAL", "authorName": "A Gayathri", "authorEmail": "gaybalahari.sse@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Saveetha School of Engineering", "decisionDate": "2025-02-03", "status": "Red"}, {"documentId": "10839147", "source": "IDAMS", "reason": "PAL", "authorName": "M. Poongodi", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Hamad Bin Khalifa University", "decisionDate": "2025-01-24", "status": "Red"}, {"documentId": "10846817", "source": "IDAMS", "reason": "PCL", "authorName": "Igor B. Shirokov", "authorEmail": "shirokov@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-01-22", "status": "Red"}, {"documentId": "10846835", "source": "IDAMS", "reason": "PCL", "authorName": "Elena I. Shirokova", "authorEmail": "shirokova@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-01-22", "status": "Red"}, {"documentId": "10846905", "source": "IDAMS", "reason": "PCL", "authorName": "Igor B. Shirokov", "authorEmail": "shirokov@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-01-22", "status": "Red"}, {"documentId": "10846822", "source": "IDAMS", "reason": "PCL", "authorName": "Igor B. Shirokov", "authorEmail": "shirokov@ieee.org", "country": "Crimea", "journalName": "Not Recorded", "organization": "Sevastopol State University", "decisionDate": "2025-01-22", "status": "Red"}, {"documentId": "9895239", "source": "IDAMS", "reason": "PAL", "authorName": "Ghaida Muttashar Abdulsahib", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "University of Technology", "decisionDate": "2025-01-22", "status": "Red"}, {"documentId": "10842763", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-01-17", "status": "Red"}, {"documentId": "10839147", "source": "IDAMS", "reason": "PAL", "authorName": "Seifedine Kadry", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Noroff University College", "decisionDate": "2025-01-17", "status": "Red"}, {"documentId": "10842942", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-01-17", "status": "Red"}, {"documentId": "10842868", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Mali", "authorEmail": "yogeshmali3350@gmail.com", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-01-17", "status": "Red"}, {"documentId": "9471880", "source": "IDAMS", "reason": "PAL", "authorName": "Seifedine Kadry", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Noroff University College", "decisionDate": "2025-01-15", "status": "Red"}, {"documentId": "10837314", "source": "IDAMS", "reason": "PAL", "authorName": "Mahmoud Ahmad Al-Khasawneh", "authorEmail": "mahmoud.alkhasawneh@skylineuniversity.ac.ae", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Skyline University College", "decisionDate": "2025-01-15", "status": "Red"}, {"documentId": "10828903", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering & Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10828628", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering & Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10828813", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G. H Raisoni College of Engineering and Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10829153", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering & Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10828823", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10829122", "source": "IDAMS", "reason": "PAL", "authorName": "Yogesh Kisan Mali", "authorEmail": "yogesh.mali@raisoni.net", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "G.H Raisoni College of Engineering and Management", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10839147", "source": "IDAMS", "reason": "PAL", "authorName": "M. Poongodi", "authorEmail": "", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "Hamad Bin Khalifa University", "decisionDate": "2025-01-13", "status": "Red"}, {"documentId": "10697186", "source": "IDAMS", "reason": "PAL", "authorName": "Karthikeyan Sholampettai Subramanian", "authorEmail": "sskarthikeyan@nitt.edu", "country": "Not Recorded", "journalName": "Not Recorded", "organization": "National Institute of Technology at Tiruchirappalli", "decisionDate": "2025-01-03", "status": "Red"}, {"documentId": "10819139", "source": "IDAMS", "reason": "PCL", "authorName": "Sergei A. Maksyuta", "authorEmail": "smax_97@mail.ru", "country": "Crimea", "journalName": "Not Recorded", "organization": "V.I. Vernadsky Crimean Federal University", "decisionDate": "2025-01-01", "status": "Red"}, {"documentId": "25-0194", "source": "PAPERCEPT", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Journal on Oceanic Engineering", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-27", "status": "Red"}, {"documentId": "25-0161", "source": "PAPERCEPT", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Journal on Oceanic Engineering", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-16", "status": "Red"}, {"documentId": "25-0161", "source": "PAPERCEPT", "reason": "PCL", "authorName": "Delgi Peraza", "authorEmail": "dperaza2@uc.edu.ve", "country": "Venezuela", "journalName": "IEEE Journal on Oceanic Engineering", "organization": "Universidad de Carabobo", "decisionDate": "2025-06-04", "status": "Red"}];
+
+  let activeRecords = [...BUILTIN_DATASET];
+  let chartInstances = {};
+
+  window.addEventListener('DOMContentLoaded', () => {
+    applyFilters();
+  });
+
+  // Base Data Filtering & Discrepancy Fix
+  function applyFilters() {
+    const selectedPlatform = document.getElementById('platformFilter').value;
+    const selectedReason = document.getElementById('reasonFilter').value;
+
+    const validEvents = activeRecords.filter(r => {
+      // Base Filter: keep ONLY rows where Document_Source (or platform) is NOT empty/null
+      if (!r.source || !r.source.trim()) return false;
+
+      // Platform filter
+      if (selectedPlatform !== 'ALL') {
+        const normSource = r.source.trim().toUpperCase();
+        if (selectedPlatform === 'S1M' && !normSource.includes('S1M')) return false;
+        if (selectedPlatform === 'PAPERCEPT' && !normSource.includes('PAPERCEPT')) return false;
+        if (selectedPlatform === 'IDAMS' && (!normSource.includes('IDAMS') || normSource.includes('S1M') || normSource.includes('PAPERCEPT'))) return false;
+      }
+
+      // Reason filter with exact string trimming
+      if (selectedReason !== 'ALL') {
+        const normReason = (r.reason || '').trim().toUpperCase();
+        if (normReason !== selectedReason) return false;
+      }
+
+      return true;
+    });
+
+    updateKpiCards(validEvents);
+    renderExistingVisualizations(validEvents);
+    renderAdvancedAnalytics(validEvents);
+    renderLeaderboard(validEvents);
+
+    document.getElementById('statusMessage').textContent =
+      `Showing ${validEvents.length} valid events (Base filter applied: non-empty platform)`;
+  }
+
+  // Top KPI Cards & Contextual Callouts
+  function updateKpiCards(events) {
+    // 1. Total Flagged Events
+    const total = events.length;
+    document.getElementById('kpiTotalEvents').textContent = total.toLocaleString();
+
+    // 2. PAL Alerts: Count where Reason is PAL (.trim().toUpperCase())
+    const pal = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PAL').length;
+    document.getElementById('kpiPalAlerts').textContent = pal.toLocaleString();
+
+    // 3. PCL Alerts: Count where Reason is PCL (.trim().toUpperCase())
+    const pcl = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL').length;
+    document.getElementById('kpiPclAlerts').textContent = pcl.toLocaleString();
+
+    // 4. Unique Flagged Authors: Count of unique email addresses (.trim().toLowerCase())
+    const emailCounts = new Map();
+    events.forEach(r => {
+      const email = (r.authorEmail || '').trim().toLowerCase();
+      if (email) {
+        emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
+      }
+    });
+
+    const totalUnique = emailCounts.size;
+    document.getElementById('kpiUniqueAuthors').textContent = totalUnique.toLocaleString();
+
+    // Contextual Callout 1: Flagged Event Rate
+    const rate = TOTAL_SUBMISSIONS_SCREENED > 0 ? (total / TOTAL_SUBMISSIONS_SCREENED) * 1000 : 0;
+    document.getElementById('calloutEventRate').textContent = `${rate.toFixed(2)} flagged events per 1,000 submissions`;
+
+    // Contextual Callout 2: New vs Recurring Author Ratio
+    let firstTime = 0;
+    emailCounts.forEach(cnt => {
+      if (cnt === 1) firstTime++;
+    });
+    const pct = totalUnique > 0 ? ((firstTime / totalUnique) * 100).toFixed(1) : '0.0';
+    document.getElementById('calloutAuthorRatio').textContent = `${pct}% new authors`;
+  }
+
+  // ==========================================
+  // SECTION 1: RESTORED EXISTING VISUALIZATIONS
+  // ==========================================
+  function renderExistingVisualizations(events) {
+    renderScreeningReasonDonut(events);
+    renderEventsByPlatform(events);
+    renderPclMatchByCountry(events);
+  }
+
+  // 1. Screening Reason Distribution (Donut Chart with counts & percentages)
+  function renderScreeningReasonDonut(events) {
+    const pal = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PAL').length;
+    const pcl = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL').length;
+    const total = pal + pcl;
+
+    const palPct = total > 0 ? ((pal / total) * 100).toFixed(1) : 0;
+    const pclPct = total > 0 ? ((pcl / total) * 100).toFixed(1) : 0;
+
+    const ctx = document.getElementById('screeningReasonChart').getContext('2d');
+    if (chartInstances.screeningReason) chartInstances.screeningReason.destroy();
+
+    chartInstances.screeningReason = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: [`PAL: ${pal} (${palPct}%)`, `PCL: ${pcl} (${pclPct}%)`],
+        datasets: [{
+          data: [pal, pcl],
+          backgroundColor: ['#3C476A', '#A86A1E'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { font: { family: 'Inter', size: 12 }, padding: 16 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}`
+            }
+          }
+        },
+        cutout: '62%'
+      }
+    });
+  }
+
+  // 2. Events by Platform (Vertical Bar Chart across S1M, IDAMS, PAPERCEPT)
+  function renderEventsByPlatform(events) {
+    let s1m = 0, idams = 0, papercept = 0;
+    events.forEach(r => {
+      const src = (r.source || '').trim().toUpperCase();
+      if (src.includes('S1M')) s1m++;
+      else if (src.includes('PAPERCEPT')) papercept++;
+      else idams++;
+    });
+
+    const ctx = document.getElementById('eventsByPlatformChart').getContext('2d');
+    if (chartInstances.eventsByPlatform) chartInstances.eventsByPlatform.destroy();
+
+    chartInstances.eventsByPlatform = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['S1M', 'IDAMS', 'PAPERCEPT'],
+        datasets: [{
+          label: 'Flagged Events',
+          data: [s1m, idams, papercept],
+          backgroundColor: '#8B263E',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // 3. PCL Match by Country (Horizontal Bar Chart for PCL matches, brackets stripped)
+  function renderPclMatchByCountry(events) {
+    const pclEvents = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL');
+    const countryMap = new Map();
+
+    pclEvents.forEach(r => {
+      let country = (r.country || '').replace(/[\[\]]/g, '').trim();
+      if (!country || country.toLowerCase() === 'not recorded') country = 'Not Recorded';
+      countryMap.set(country, (countryMap.get(country) || 0) + 1);
+    });
+
+    const sorted = Array.from(countryMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const labels = sorted.map(c => c[0]);
+    const data = sorted.map(c => c[1]);
+
+    const ctx = document.getElementById('pclCountryChart').getContext('2d');
+    if (chartInstances.pclCountry) chartInstances.pclCountry.destroy();
+
+    chartInstances.pclCountry = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels.length > 0 ? labels : ['No PCL Matches'],
+        datasets: [{
+          label: 'PCL Matches',
+          data: data.length > 0 ? data : [0],
+          backgroundColor: '#A86A1E',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ==========================================
+  // SECTION 2: NEW ADVANCED ANALYTICS SECTION
+  // ==========================================
+  function renderAdvancedAnalytics(events) {
+    renderMonthlyChart(events);
+    renderInstitutionsChart(events);
+    renderCountryStackedChart(events);
+    renderJournalChart(events);
+  }
+
+  // Monthly Flagged-Event Trend (Bar/Line Chart)
+  function renderMonthlyChart(events) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const counts = new Array(12).fill(0);
+
+    events.forEach(r => {
+      if (r.decisionDate && r.decisionDate.length >= 7) {
+        const m = parseInt(r.decisionDate.substring(5, 7), 10);
+        if (m >= 1 && m <= 12) counts[m - 1]++;
+      }
+    });
+
+    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+    if (chartInstances.monthly) chartInstances.monthly.destroy();
+
+    chartInstances.monthly = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Flagged Events',
+          data: counts,
+          backgroundColor: '#8B263E',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Top High-Risk Institutions (Horizontal Bar Chart with JSON try-catch)
+  function renderInstitutionsChart(events) {
+    const orgMap = new Map();
+    events.forEach(r => {
+      let org = (r.organization || '').trim();
+      if (!org || org === 'Unspecified Affiliation' || org === 'Not Recorded') {
+        org = 'Not Recorded';
+      }
+      orgMap.set(org, (orgMap.get(org) || 0) + 1);
+    });
+
+    const sorted = Array.from(orgMap.entries())
+      .filter(([name]) => name !== 'Not Recorded')
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const labels = sorted.map(s => s[0].length > 26 ? s[0].substring(0, 24) + '…' : s[0]);
+    const data = sorted.map(s => s[1]);
+
+    const ctx = document.getElementById('institutionsChart').getContext('2d');
+    if (chartInstances.institutions) chartInstances.institutions.destroy();
+
+    chartInstances.institutions = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Flagged Events',
+          data: data,
+          backgroundColor: '#481111',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Alert Reason by Country (100% Stacked Bar Chart)
+  function renderCountryStackedChart(events) {
+    const countryMap = new Map();
+
+    events.forEach(r => {
+      let country = (r.country || '').replace(/[\[\]]/g, '').trim();
+      if (!country || country.toLowerCase() === 'not recorded') country = 'Not Recorded';
+
+      let entry = countryMap.get(country);
+      if (!entry) {
+        entry = { pal: 0, pcl: 0, total: 0 };
+        countryMap.set(country, entry);
+      }
+      entry.total++;
+      const reason = (r.reason || '').trim().toUpperCase();
+      if (reason === 'PCL') entry.pcl++;
+      else entry.pal++;
+    });
+
+    const sorted = Array.from(countryMap.entries())
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 10);
+
+    const labels = sorted.map(c => c[0]);
+    const palPct = sorted.map(c => ((c[1].pal / c[1].total) * 100).toFixed(1));
+    const pclPct = sorted.map(c => ((c[1].pcl / c[1].total) * 100).toFixed(1));
+
+    const ctx = document.getElementById('countryStackedChart').getContext('2d');
+    if (chartInstances.countryStacked) chartInstances.countryStacked.destroy();
+
+    chartInstances.countryStacked = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'PAL (%)',
+            data: palPct,
+            backgroundColor: '#3C476A',
+            borderRadius: 2
+          },
+          {
+            label: 'PCL (%)',
+            data: pclPct,
+            backgroundColor: '#A86A1E',
+            borderRadius: 2
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, max: 100, grid: { color: 'rgba(72,17,17,0.06)' }, ticks: { callback: v => v + '%' } },
+          y: { stacked: true, grid: { display: false } }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.raw}%`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Journal Risk Concentration (Bar Chart)
+  function renderJournalChart(events) {
+    const jMap = new Map();
+    events.forEach(r => {
+      let j = (r.journalName || '').trim();
+      if (!j || j.toLowerCase() === 'not recorded') j = 'Not Recorded';
+      jMap.set(j, (jMap.get(j) || 0) + 1);
+    });
+
+    const sorted = Array.from(jMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const labels = sorted.map(j => j[0].length > 24 ? j[0].substring(0, 22) + '…' : j[0]);
+    const data = sorted.map(j => j[1]);
+
+    const ctx = document.getElementById('journalConcentrationChart').getContext('2d');
+    if (chartInstances.journal) chartInstances.journal.destroy();
+
+    chartInstances.journal = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Flagged Events',
+          data: data,
+          backgroundColor: '#8B263E',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(72,17,17,0.06)' } },
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 30, minRotation: 30, font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  // Repeat Offender Leaderboard
+  function renderLeaderboard(events) {
+    const emailGroup = new Map();
+
+    events.forEach(r => {
+      const email = (r.authorEmail || '').trim().toLowerCase();
+      if (!email) return;
+
+      let entry = emailGroup.get(email);
+      if (!entry) {
+        entry = {
+          name: r.authorName || 'Unknown Author',
+          email,
+          eventCount: 0,
+          reasonCounts: new Map()
+        };
+        emailGroup.set(email, entry);
+      }
+      entry.eventCount++;
+      const res = (r.reason || '').trim().toUpperCase();
+      entry.reasonCounts.set(res, (entry.reasonCounts.get(res) || 0) + 1);
+    });
+
+    const repeatOffenders = [];
+    emailGroup.forEach(entry => {
+      if (entry.eventCount > 1) {
+        let primaryReason = 'PAL';
+        let maxCnt = 0;
+        entry.reasonCounts.forEach((cnt, res) => {
+          if (cnt > maxCnt) {
+            maxCnt = cnt;
+            primaryReason = res;
+          }
+        });
+        repeatOffenders.push({
+          name: entry.name,
+          email: entry.email,
+          eventCount: entry.eventCount,
+          primaryReason,
+          isHighRisk: entry.eventCount > 3
+        });
+      }
+    });
+
+    repeatOffenders.sort((a, b) => b.eventCount - a.eventCount);
+
+    document.getElementById('leaderboardCount').textContent =
+      `Showing ${repeatOffenders.length} authors with count > 1`;
+
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '';
+
+    if (repeatOffenders.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--mc-text-muted);">No repeat offenders found for active filter.</td></tr>';
+      return;
+    }
+
+    repeatOffenders.forEach(off => {
+      const tr = document.createElement('tr');
+      const badgeClass = off.primaryReason === 'PCL' ? 'badge-pcl' : 'badge-pal';
+      const warningHtml = off.isHighRisk ? '<span class="badge badge-warn">Critical (&gt;3)</span>' : '';
+
+      tr.innerHTML = `
+        <td style="font-weight: 500;">${off.name}</td>
+        <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.85;">${off.email}</td>
+        <td>
+          <span style="font-weight: 700;">${off.eventCount}</span>
+          ${warningHtml}
+        </td>
+        <td style="text-align: right;">
+          <span class="badge ${badgeClass}">${off.primaryReason}</span>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Handle Dynamic File Upload with SheetJS
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const parsedRecords = [];
+
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) return;
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (rows.length < 2) return;
+
+        const headers = rows[0].map(h => String(h || '').trim().toLowerCase().replace(/[\s_-]+/g, ''));
+        const findCol = (...cands) => headers.findIndex(h => cands.includes(h));
+
+        const srcIdx = findCol('documentsource', 'source', 'platform');
+        const reasonIdx = findCol('matchedterm', 'reason');
+        const authorIdx = findCol('authorfullname', 'authorname');
+        const emailIdx = findCol('authoremailaddress', 'email', 'authoremail');
+        const journalIdx = findCol('journalname', 'journal');
+        const countryIdx = findCol('country');
+        const dateIdx = findCol('decisiondate', 'startdate', 'enddate');
+        const affilIdx = findCol('affiliations', 'affiliation');
+
+        for (let rIdx = 1; rIdx < rows.length; rIdx++) {
+          const row = rows[rIdx];
+          const getVal = idx => (idx >= 0 && idx < row.length ? String(row[idx] || '').trim() : '');
+
+          // Strict Base Filter: only rows with valid non-empty Document_Source
+          const rawSource = srcIdx >= 0 ? getVal(srcIdx) : sheetName;
+          if (!rawSource) continue;
+
+          let rawReason = getVal(reasonIdx).trim();
+          let exactReason = 'PAL';
+          if (/^\s*PCL\s*$/i.test(rawReason)) exactReason = 'PCL';
+          else if (/^\s*SDN\s*$/i.test(rawReason)) exactReason = 'SDN';
+
+          const email = getVal(emailIdx).toLowerCase();
+          const author = getVal(authorIdx) || 'Unknown Author';
+          const journal = getVal(journalIdx) || 'Not Recorded';
+          const country = getVal(countryIdx).replace(/[\[\]]/g, '').trim() || 'Not Recorded';
+          const dateStr = getVal(dateIdx) || '2025-01-01';
+
+          // Robust Affiliation JSON Parsing with try-catch
+          let org = 'Not Recorded';
+          const rawAff = getVal(affilIdx);
+          if (rawAff) {
+            try {
+              const parsedJson = JSON.parse(rawAff);
+              if (Array.isArray(parsedJson) && parsedJson.length > 0 && typeof parsedJson[0] === 'object') {
+                org = parsedJson[0].organisationName || parsedJson[0].organizationName || parsedJson[0].institution || 'Not Recorded';
+              }
+            } catch (err) {
+              const m = rawAff.match(/Organi[sz]ation\s*Name\s*:\s*([^,\]]+)/i);
+              if (m && m[1]) org = m[1].trim();
+            }
+          }
+
+          parsedRecords.push({
+            source: rawSource.toUpperCase().includes('S1M') ? 'S1M' : (rawSource.toUpperCase().includes('PAPERCEPT') ? 'PAPERCEPT' : 'IDAMS'),
+            reason: exactReason,
+            authorName: author,
+            authorEmail: email,
+            journalName: journal,
+            country: country,
+            organization: org,
+            decisionDate: dateStr
+          });
+        }
+      });
+
+      if (parsedRecords.length > 0) {
+        activeRecords = parsedRecords;
+        applyFilters();
+        alert(`Successfully imported ${parsedRecords.length} valid events from ${file.name}`);
+      } else {
+        alert('No valid screening rows found with a valid Document_Source column.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function resetToBuiltIn() {
+    activeRecords = [...BUILTIN_DATASET];
+    document.getElementById('platformFilter').value = 'ALL';
+    document.getElementById('reasonFilter').value = 'ALL';
+    applyFilters();
+  }
+</script>
+</body>
+</html>

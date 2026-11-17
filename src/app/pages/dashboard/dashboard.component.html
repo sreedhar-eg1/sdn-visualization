@@ -310,7 +310,7 @@
       </div>
     </section>
   } @else {
-    <!-- Top-Level Stats Refactoring (Exactly 4 Clean Cards) -->
+    <!-- Top-Level Stats (Clean minimal row of exactly 4 stat cards: Title and absolute Count only) -->
     <section aria-label="Top-Level Stats" class="space-y-3">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- 1. Total Flagged Events -->
@@ -340,9 +340,9 @@
           (click)="
             openRedModal(
               'PAL Alerts',
-              'Screening alerts where the screening reason is PAL (Prohibited Author List).',
+              'Valid events where reason is PAL.',
               'PAL',
-              'palAlerts'
+              'palEvents'
             )
           "
           class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
@@ -361,9 +361,9 @@
           (click)="
             openRedModal(
               'PCL Alerts',
-              'Screening alerts where the screening reason is PCL (Prohibited Country List).',
+              'Valid events where reason is PCL.',
               'PCL',
-              'pclAlerts'
+              'pclEvents'
             )
           "
           class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
@@ -377,72 +377,185 @@
         </button>
 
         <!-- 4. Unique Flagged Authors -->
-        <button
-          type="button"
-          (click)="
-            openRedModal(
-              'Unique Flagged Authors',
-              'Distinct author email addresses across flagged screening records.',
-              'ALL',
-              'uniqueFlaggedAuthors'
-            )
-          "
-          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
-        >
+        <div class="mc-card p-5 text-left">
           <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
             Unique Flagged Authors
           </div>
           <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
             {{ kpiStats().uniqueFlaggedAuthors }}
           </div>
-        </button>
+        </div>
       </div>
     </section>
 
-    <!-- Charts & Visualizations Setup (4 Clean Minimal Charts in 2x2 Grid) -->
+    <!-- Section 1: Restored Existing Visualizations -->
+    <div class="flex items-center justify-between pb-2 border-b" style="border-color: var(--mc-line)">
+      <h2 class="mc-h3 font-serif font-bold text-lg" style="color: var(--mc-oxblood-dark)">Screening Overview</h2>
+      <span class="mc-eyebrow text-xs uppercase tracking-wider" style="color: var(--mc-oxblood-light)">Restored Core Visualizations</span>
+    </div>
+
+    <section aria-label="Screening Overview Charts" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- 1. Screening Reason Distribution (Donut Chart) -->
+      <div class="mc-card p-5">
+        <div class="w-full min-h-[300px]">
+          <highcharts-chart
+            [options]="screeningReasonChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[300px]"
+          />
+        </div>
+      </div>
+
+      <!-- 2. Events by Platform (Vertical Bar Chart) -->
+      <div class="mc-card p-5">
+        <div class="w-full min-h-[300px]">
+          <highcharts-chart
+            [options]="eventsByPlatformChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[300px]"
+          />
+        </div>
+      </div>
+
+      <!-- 3. PCL Match by Country (Horizontal Bar Chart) -->
+      <div class="mc-card p-5">
+        <div class="w-full min-h-[300px]">
+          <highcharts-chart
+            [options]="pclMatchByCountryChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[300px]"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: New Advanced Analytics Section -->
+    <div class="flex items-center justify-between pb-2 border-b mt-4" style="border-color: var(--mc-line)">
+      <h2 class="mc-h3 font-serif font-bold text-lg" style="color: var(--mc-oxblood-dark)">Advanced Surveillance Analytics</h2>
+      <span class="mc-eyebrow text-xs uppercase tracking-wider" style="color: var(--mc-oxblood-light)">Risk Trends & Exposure Metrics</span>
+    </div>
+
+    <!-- Contextual Callouts (Flagged Event Rate & Author Ratio) -->
+    <section aria-label="Screening Exposure Ratios" class="mc-card p-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="mc-eyebrow text-xs font-bold uppercase tracking-wider" style="color: var(--mc-oxblood-light)">
+          Flagged Event Rate:
+        </span>
+        <span class="font-mono text-sm font-semibold px-2.5 py-1 rounded border" style="background: rgba(72,17,17,0.04); border-color: var(--mc-line)">
+          {{ kpiStats().flaggedEventRate }}
+        </span>
+      </div>
+      <div class="hidden md:block w-px h-6" style="background: var(--mc-line)"></div>
+      <div class="flex items-center gap-3">
+        <span class="mc-eyebrow text-xs font-bold uppercase tracking-wider" style="color: var(--mc-oxblood-light)">
+          Author Risk Ratio:
+        </span>
+        <span class="font-mono text-sm font-semibold px-2.5 py-1 rounded border" style="background: rgba(72,17,17,0.04); border-color: var(--mc-line)">
+          {{ kpiStats().newVsRecurringAuthors }} new authors
+        </span>
+      </div>
+    </section>
+
+    <!-- New Analytics & Visualizations Section (4 Minimal Charts in 2x2 Grid) -->
     <section aria-label="Visualizations Setup" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Chart 1: Monthly Flagged-Event Trend -->
       <div class="mc-card p-5">
-        <div class="w-full min-h-[320px]">
+        <div class="w-full min-h-[340px]">
           <highcharts-chart
             [options]="monthlyTrendChartOptions()"
             [oneToOne]="true"
-            class="block w-full h-[320px]"
+            class="block w-full h-[340px]"
           />
         </div>
       </div>
 
-      <!-- Chart 2: Screening Reason Distribution -->
+      <!-- Chart 2: Top High-Risk Institutions -->
       <div class="mc-card p-5">
-        <div class="w-full min-h-[320px]">
+        <div class="w-full min-h-[340px]">
           <highcharts-chart
-            [options]="reasonDistributionChartOptions()"
+            [options]="institutionsChartOptions()"
             [oneToOne]="true"
-            class="block w-full h-[320px]"
+            class="block w-full h-[340px]"
           />
         </div>
       </div>
 
-      <!-- Chart 3: Events by Platform -->
+      <!-- Chart 3: Alert Reason by Country (100% Stacked) -->
       <div class="mc-card p-5">
-        <div class="w-full min-h-[320px]">
+        <div class="w-full min-h-[340px]">
           <highcharts-chart
-            [options]="platformChartOptions()"
+            [options]="alertReasonByCountryChartOptions()"
             [oneToOne]="true"
-            class="block w-full h-[320px]"
+            class="block w-full h-[340px]"
           />
         </div>
       </div>
 
-      <!-- Chart 4: PCL Match by Country -->
+      <!-- Chart 4: Journal Risk Concentration -->
       <div class="mc-card p-5">
-        <div class="w-full min-h-[320px]">
+        <div class="w-full min-h-[340px]">
           <highcharts-chart
-            [options]="pclCountryChartOptions()"
+            [options]="journalConcentrationChartOptions()"
             [oneToOne]="true"
-            class="block w-full h-[320px]"
+            class="block w-full h-[340px]"
           />
         </div>
+      </div>
+    </section>
+
+    <!-- Repeat Offender Leaderboard (Scrollable Data Table) -->
+    <section aria-label="Repeat Offender Leaderboard" class="mc-card">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3" style="border-bottom: 1px solid var(--mc-line)">
+        <div>
+          <span class="mc-eyebrow">— Repeat Compliance Watch</span>
+          <h3 class="mc-h3">Repeat Offender Leaderboard ({{ repeatOffenderLeaderboard().length }} Authors)</h3>
+        </div>
+        <div class="text-xs opacity-75">
+          Authors flagged more than once across screening events.
+        </div>
+      </div>
+
+      <div class="mc-table-wrap overflow-x-auto max-h-80 overflow-y-auto mt-4">
+        <table class="mc-table w-full text-left text-xs">
+          <thead class="sticky top-0 bg-white" style="z-index: 10;">
+            <tr>
+              <th>Author Name</th>
+              <th>Email</th>
+              <th>Event Count</th>
+              <th class="text-right">Primary Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (offender of repeatOffenderLeaderboard(); track offender.email) {
+              <tr>
+                <td class="font-medium">{{ offender.name }}</td>
+                <td class="font-mono text-xs opacity-80">{{ offender.email }}</td>
+                <td>
+                  <span class="font-semibold">{{ offender.eventCount }}</span>
+                  @if (offender.isHighRisk) {
+                    <span class="mc-tag bad text-[10px] ml-1.5 font-bold uppercase" title="Flagged more than 3 times">Critical (&gt;3)</span>
+                  }
+                </td>
+                <td class="text-right">
+                  <span
+                    class="mc-tag text-xs font-semibold"
+                    [class.warn]="offender.primaryReason === 'PCL'"
+                    [class.info]="offender.primaryReason === 'PAL'"
+                  >
+                    {{ offender.primaryReason }}
+                  </span>
+                </td>
+              </tr>
+            }
+            @if (repeatOffenderLeaderboard().length === 0) {
+              <tr>
+                <td colspan="4" class="text-center py-6 opacity-60">
+                  No repeat offenders found for the active filter selection.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     </section>
 

@@ -81,7 +81,7 @@ function safeJsonParse<T>(raw: string | undefined, fallback: T): T {
 
 function normalizeCountry(raw: string): string {
   const trimmed = cleanText(raw).replace(/[\[\]]/g, '').trim();
-  if (!trimmed) return 'Not recorded';
+  if (!trimmed) return 'Not Recorded';
   if (/^p\.?\s*r\.?\s*china$/i.test(trimmed)) return 'China';
   return trimmed;
 }
@@ -362,7 +362,7 @@ export function parseSanctionsTableRows(
     if (isNewDoc || !currentDocId) {
       currentDocId = explicitDocId || msId || currentDocId || `DOC-${currentSource}-${rIdx}`;
       currentManuscriptId = msId || currentManuscriptId;
-      currentJournalName = getVal(journalIdx) || currentJournalName;
+      currentJournalName = getVal(journalIdx) || currentJournalName || 'Not Recorded';
       currentDocTitle = getVal(docTitleIdx) || currentJournalName || (msId ? `Manuscript ${msId}` : `Screened Document ${currentDocId}`);
       currentDocType = getVal(docTypeIdx) || currentDocType || 'Article';
       if (getVal(sourceIdx)) {
@@ -412,7 +412,7 @@ export function parseSanctionsTableRows(
       parsedOrg ||
       cleanText(affilObj.organisationName) ||
       cleanText(affilObj.organisationDivision) ||
-      'Unspecified Affiliation';
+      'Not Recorded';
 
     const rawReason = getVal(reasonIdx).trim();
     const upperReason = rawReason.toUpperCase();
