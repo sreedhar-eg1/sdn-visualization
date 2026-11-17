@@ -17,19 +17,31 @@ describe('DashboardComponent', () => {
     }).compileComponents();
   });
 
-  it('should bypass the upload screen and directly render main metrics, tables, and charts without an empty placeholder', async () => {
+  it('should not show 0-data metrics when nothing is uploaded, and directly render metrics once data is loaded', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const el = fixture.nativeElement as HTMLElement;
-    const text = el.textContent ?? '';
+    let el = fixture.nativeElement as HTMLElement;
+    let text = el.textContent ?? '';
 
-    // Verify upload landing screen is completely removed
-    expect(text).not.toContain('Upload Screening Export Files to Populate the Dashboard');
-    expect(text).not.toContain('Upload-First Mode');
+    // Verify 0-data metrics, charts, and tables are removed when nothing is uploaded
+    expect(text).not.toContain('Total Flagged Events');
+    expect(text).not.toContain('Screening Overview');
+    expect(text).not.toContain('Repeat Offender Leaderboard');
 
-    // Verify main dashboard metrics and tables are directly rendered
+    // Verify clean upload prompt is displayed
+    expect(text).toContain('No Screening Data Loaded');
+    expect(text).toContain('+ Upload Excel / CSV');
+
+    // When sample dataset is loaded, all metrics and tables render
+    fixture.componentInstance['loadSampleExcel']();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    el = fixture.nativeElement as HTMLElement;
+    text = el.textContent ?? '';
+
     expect(text).toContain('Total Flagged Events');
     expect(text).toContain('PAL Alerts');
     expect(text).toContain('PCL Alerts');

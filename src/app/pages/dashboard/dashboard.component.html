@@ -194,8 +194,9 @@
     </div>
   </section>
 
-  <!-- Top-Level Stats (Clean minimal row of exactly 5 stat cards: Title and absolute Count only) -->
-  <section aria-label="Top-Level Stats" class="space-y-3">
+  @if (dataService.records().length > 0) {
+    <!-- Top-Level Stats (Clean minimal row of exactly 5 stat cards: Title and absolute Count only) -->
+    <section aria-label="Top-Level Stats" class="space-y-3">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- 1. Total Flagged Events -->
         <button
@@ -587,6 +588,38 @@
         }
       </div>
     </section>
+  } @else {
+    <!-- Clean Prompt when No Screening Records are Uploaded -->
+    <section aria-label="No Data Uploaded Prompt" class="mc-card text-center py-14 px-6 my-4 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 rounded-full flex items-center justify-center mb-3" style="background: rgba(72,17,17,0.06); color: var(--mc-oxblood)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" x2="12" y1="3" y2="15" />
+        </svg>
+      </div>
+      <span class="mc-eyebrow mb-1">— Surveillance Screening</span>
+      <h3 class="mc-h3 mb-2 font-serif font-bold text-lg" style="color: var(--mc-oxblood-dark)">
+        No Screening Data Loaded
+      </h3>
+      <p class="mc-body text-sm max-w-md opacity-75 mb-6">
+        The dashboard is waiting for screening export files. Upload an Excel (.xlsx / .xls) or CSV export to view continuous compliance analytics, risk trends, and author watchlists.
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <label class="mc-btn mc-btn-sm cursor-pointer">
+          <span>+ Upload Excel / CSV</span>
+          <span class="arr">&rarr;</span>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv,.txt"
+            multiple
+            (change)="onCsvFileUpload($event)"
+            class="sr-only"
+          />
+        </label>
+      </div>
+    </section>
+  }
 </div>
 
 <!-- Red-Tagged Records Drilldown Modal -->
