@@ -241,78 +241,9 @@
     }
   </section>
 
-  @if (dataService.records().length === 0) {
-    <!-- Empty / Upload-First State -->
-    <!-- <section
-      aria-label="Upload Screening Data"
-      (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onDropFiles($event)"
-      class="mc-card text-center py-12"
-      [class.border-2]="isDraggingFiles()"
-      [class.border-dashed]="isDraggingFiles()"
-    >
-      <div class="mc-empty mx-auto items-center">
-        <div class="ico">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" x2="12" y1="3" y2="15" />
-          </svg>
-        </div>
-        <span class="mc-eyebrow">— Upload-First Mode &bull; Mock JSON on Hold</span>
-        <h2 class="mc-h2">Upload Screening Export Files to Populate the Dashboard</h2>
-        <p class="mc-lead max-w-lg mx-auto">
-          Drag &amp; drop or select Excel (<span class="mc-code">.xlsx</span> / <span class="mc-code">.xls</span>) or CSV exports.
-          Uploading multiple files sequentially automatically merges and deduplicates records across batches.
-        </p>
-
-        <div class="flex flex-wrap items-center justify-center gap-3 mt-4">
-          <label class="mc-btn cursor-pointer">
-            <span>Select Excel / CSV Files</span>
-            <span class="arr">&rarr;</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv,.txt"
-              multiple
-              (change)="onCsvFileUpload($event)"
-              class="sr-only"
-            />
-          </label>
-
-          @for (file of builtInExcelFiles; track file.name) {
-            <button
-              type="button"
-              (click)="loadDirectExcel(file.name)"
-              class="mc-btn mc-btn-ghost"
-              [title]="file.description"
-            >
-              Load {{ file.label }} ({{ file.recordCount }})
-            </button>
-          }
-
-          <button
-            type="button"
-            (click)="loadSampleExcel()"
-            class="mc-btn mc-btn-ghost"
-          >
-            Load Built-in 23-Row Sample
-          </button>
-
-          <button
-            type="button"
-            (click)="setDatasetMode('MOCK_ONLY')"
-            class="mc-btn mc-btn-ghost"
-          >
-            Preview Mock JSON ({{ dataService.mockRecords().length }})
-          </button>
-        </div>
-      </div>
-    </section> -->
-  } @else {
-    <!-- Top-Level Stats (Clean minimal row of exactly 4 stat cards: Title and absolute Count only) -->
-    <section aria-label="Top-Level Stats" class="space-y-3">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <!-- Top-Level Stats (Clean minimal row of exactly 5 stat cards: Title and absolute Count only) -->
+  <section aria-label="Top-Level Stats" class="space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- 1. Total Flagged Events -->
         <button
           type="button"
@@ -376,10 +307,31 @@
           </div>
         </button>
 
-        <!-- 4. Unique Flagged Authors -->
+        <!-- 4. SDN Alerts -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'SDN Alerts',
+              'Valid events where reason is SDN.',
+              'SDN',
+              'sdnEvents'
+            )
+          "
+          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
+        >
+          <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
+            SDN Alerts
+          </div>
+          <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
+            {{ kpiStats().sdnAlerts }}
+          </div>
+        </button>
+
+        <!-- 5. Unique Flagged Authors Email -->
         <div class="mc-card p-5 text-left">
           <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
-            Unique Flagged Authors
+            Unique Flagged Authors Email
           </div>
           <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
             {{ kpiStats().uniqueFlaggedAuthors }}
@@ -406,14 +358,28 @@
         </div>
       </div>
 
-      <!-- 2. Events by Platform (Vertical Bar Chart) -->
+      <!-- 2. Events by Platform (Vertical Bar Chart or Overall System Count) -->
       <div class="mc-card p-5">
         <div class="w-full min-h-[300px]">
-          <highcharts-chart
-            [options]="eventsByPlatformChartOptions()"
-            [oneToOne]="true"
-            class="block w-full h-[300px]"
-          />
+          @if (selectedPlatform() === 'ALL') {
+            <highcharts-chart
+              [options]="eventsByPlatformChartOptions()"
+              [oneToOne]="true"
+              class="block w-full h-[300px]"
+            />
+          } @else {
+            <div class="flex flex-col items-center justify-center h-[300px] text-center p-6 bg-[#FAF7F2] rounded-lg border border-[var(--mc-line)]">
+              <span class="mc-eyebrow text-xs uppercase tracking-wider mb-2 font-mono" style="color: var(--mc-oxblood-light)">
+                Overall System Screened
+              </span>
+              <div class="font-mono text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--mc-oxblood-dark)">
+                {{ selectedPlatformScreenedCount() }}
+              </div>
+              <p class="text-xs text-gray-500 max-w-xs mt-1">
+                Overall system submissions processed for the {{ selectedPlatform() }} platform pipeline (Sheet 4).
+              </p>
+            </div>
+          }
         </div>
       </div>
 
@@ -458,7 +424,7 @@
 
     <!-- New Analytics & Visualizations Section (4 Minimal Charts in 2x2 Grid) -->
     <section aria-label="Visualizations Setup" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Chart 1: Monthly Flagged-Event Trend -->
+      <!-- Chart 1: Monthly sanctioned author -->
       <div class="mc-card p-5">
         <div class="w-full min-h-[340px]">
           <highcharts-chart
@@ -521,7 +487,27 @@
             <tr>
               <th>Author Name</th>
               <th>Email</th>
-              <th>Event Count</th>
+              <th
+                id="thEventCount"
+                (click)="toggleLeaderboardSort()"
+                class="cursor-pointer select-none hover:text-[var(--mc-oxblood-dark)] transition-colors"
+                role="button"
+                tabindex="0"
+                (keydown.enter)="toggleLeaderboardSort()"
+                (keydown.space)="toggleLeaderboardSort()"
+                title="Click to toggle sorting"
+              >
+                <div class="flex items-center gap-1.5">
+                  <span>Event Count</span>
+                  <span class="text-xs font-mono font-bold" id="eventCountSortIcon">
+                    @if (leaderboardSortOrder() === 'desc') {
+                      &darr;
+                    } @else {
+                      &uarr;
+                    }
+                  </span>
+                </div>
+              </th>
               <th class="text-right">Primary Reason</th>
             </tr>
           </thead>
@@ -637,7 +623,6 @@
         }
       </div>
     </section>
-  }
 </div>
 
 <!-- Red-Tagged Records Drilldown Modal -->

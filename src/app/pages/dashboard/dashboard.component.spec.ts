@@ -17,7 +17,7 @@ describe('DashboardComponent', () => {
     }).compileComponents();
   });
 
-  it('should show the upload-first empty state when no files are uploaded yet', async () => {
+  it('should bypass the upload screen and directly render main metrics, tables, and charts without an empty placeholder', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -25,33 +25,33 @@ describe('DashboardComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     const text = el.textContent ?? '';
 
-    expect(text).toContain('Upload Screening Export Files to Populate the Dashboard');
-    expect(text).toContain('Uploaded Files Only (0)');
-    expect(text).toContain('Mock JSON (On Hold: 246)');
-    expect(text).not.toContain('Monthly Flagged-Event Trend');
-  });
+    // Verify upload landing screen is completely removed
+    expect(text).not.toContain('Upload Screening Export Files to Populate the Dashboard');
+    expect(text).not.toContain('Upload-First Mode');
 
-  it('should populate exactly 4 top-level stat cards and 4 minimal charts after uploading sample data', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const el = fixture.nativeElement as HTMLElement;
-    const loadSampleBtn = Array.from(el.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Load Built-in 23-Row Sample')
-    );
-    expect(loadSampleBtn).toBeTruthy();
-
-    loadSampleBtn?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const text = el.textContent ?? '';
-    // Verify 4 clean stat cards exist (Title and absolute Count only)
+    // Verify main dashboard metrics and tables are directly rendered
     expect(text).toContain('Total Flagged Events');
     expect(text).toContain('PAL Alerts');
     expect(text).toContain('PCL Alerts');
-    expect(text).toContain('Unique Flagged Authors');
+    expect(text).toContain('SDN Alerts');
+    expect(text).toContain('Unique Flagged Authors Email');
+    expect(text).toContain('Repeat Offender Leaderboard');
+  });
+
+  it('should populate exactly 5 top-level stat cards, render charts, and allow interactive sorting on Repeat Offender Leaderboard', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance['dataService'].loadBuiltInSampleCsv();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
+    // Verify 5 clean stat cards exist (Title and absolute Count only)
+    expect(text).toContain('Total Flagged Events');
+    expect(text).toContain('PAL Alerts');
+    expect(text).toContain('PCL Alerts');
+    expect(text).toContain('SDN Alerts');
+    expect(text).toContain('Unique Flagged Authors Email');
 
     // Verify 3 restored visualizations exist
     expect(text).toContain('Screening Reason Distribution');
@@ -63,7 +63,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Author Risk Ratio:');
 
     // Verify 4 new analytics charts exist
-    expect(text).toContain('Monthly Flagged-Event Trend');
+    expect(text).toContain('Monthly sanctioned author');
     expect(text).toContain('Top High-Risk Institutions');
     expect(text).toContain('Alert Reason by Country (100% Stacked)');
     expect(text).toContain('Journal Risk Concentration');
@@ -73,12 +73,27 @@ describe('DashboardComponent', () => {
     expect(kpi.totalFlaggedEvents).toBe(23);
     expect(kpi.palAlerts).toBe(11);
     expect(kpi.pclAlerts).toBe(0);
+    expect(kpi.sdnAlerts).toBe(12);
     expect(kpi.palVsPclAlerts).toBe('11 PAL / 0 PCL');
     expect(kpi.flaggedEventRate).toContain('per 1,000 submissions');
     expect(kpi.uniqueFlaggedAuthors).toBe(21);
 
-    const leaderboard = fixture.componentInstance['repeatOffenderLeaderboard']();
-    expect(leaderboard.length).toBeGreaterThan(0);
+    // Verify default descending sort on leaderboard (highest count at top)
+    const initialLeaderboard = fixture.componentInstance['repeatOffenderLeaderboard']();
+    expect(initialLeaderboard.length).toBeGreaterThan(0);
+    expect(fixture.componentInstance['leaderboardSortOrder']()).toBe('desc');
+
+    // Interactive Sorting: Click "Event Count" header to toggle sort to ascending
+    const thEventCount = el.querySelector('#thEventCount') as HTMLElement;
+    expect(thEventCount).toBeTruthy();
+    thEventCount.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance['leaderboardSortOrder']()).toBe('asc');
+
+    // Click again to toggle sort back to descending
+    thEventCount.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance['leaderboardSortOrder']()).toBe('desc');
 
     // Clicking stat card opens modal
     const totalEventsBtn = Array.from(el.querySelectorAll('button')).find((b) =>
@@ -97,16 +112,11 @@ describe('DashboardComponent', () => {
 
   it('should update stat cards and charts dynamically when filtering by platform and reason', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance['setDatasetMode']('MOCK_ONLY');
     fixture.detectChanges();
     await fixture.whenStable();
 
     const el = fixture.nativeElement as HTMLElement;
-    const mockBtn = Array.from(el.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Preview Mock JSON')
-    );
-    mockBtn?.click();
-    fixture.detectChanges();
-
     const platformSelect = el.querySelector('#sourceFilter') as HTMLSelectElement;
     expect(platformSelect).toBeTruthy();
 
@@ -125,6 +135,7 @@ describe('DashboardComponent', () => {
     // Filter by Reason PCL
     const reasonSelect = el.querySelector('#reasonFilter') as HTMLSelectElement;
     expect(reasonSelect).toBeTruthy();
+    expect(Array.from(reasonSelect.options).map((o) => o.value)).toContain('SDN');
     reasonSelect.value = 'PCL';
     reasonSelect.dispatchEvent(new Event('change'));
     fixture.detectChanges();
@@ -132,6 +143,12 @@ describe('DashboardComponent', () => {
     const pclKpi = fixture.componentInstance['kpiStats']();
     expect(pclKpi.palAlerts).toBe(0);
     expect(pclKpi.pclAlerts).toBe(pclKpi.totalFlaggedEvents);
+
+    // Filter by platform S1M and verify prominent Sheet 4 system screened count displays
+    platformSelect.value = 'S1M';
+    platformSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(el.textContent).toContain('3,635,232 Total Screened in S1M');
 
     // Reset filters
     const resetBtn = Array.from(el.querySelectorAll('button')).find((b) =>
@@ -287,7 +304,7 @@ describe('DashboardComponent', () => {
     const journalData = (journalChart.series?.[0] as any)?.data as number[];
     expect(journalData[0]).toBe(2);
 
-    // 4. Monthly flagged-event trend (Jan: 1, Feb: 1, Mar: 1, Apr: 1, May: 1, Jun: 1, Jul: 1, Aug-Dec: 0)
+    // 4. Monthly sanctioned author (Jan: 1, Feb: 1, Mar: 1, Apr: 1, May: 1, Jun: 1, Jul: 1, Aug-Dec: 0)
     const monthlyChart = comp['monthlyTrendChartOptions']();
     const monthlyData = (monthlyChart.series?.[0] as any)?.data as number[];
     expect(monthlyData.slice(0, 7)).toEqual([1, 1, 1, 1, 1, 1, 1]);

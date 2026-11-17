@@ -58,7 +58,7 @@ export class DashboardComponent {
 
   // Filter signals
   protected readonly selectedPlatform = signal<ScreeningSource | 'ALL'>('ALL');
-  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL'>('ALL');
+  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL' | 'SDN'>('ALL');
   protected readonly selectedSource = this.selectedPlatform; // Alias for backward compatibility
   protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
   protected readonly startDate = signal<string>(this.initialRange.start);
@@ -68,6 +68,21 @@ export class DashboardComponent {
   protected readonly uploadStatusMessage = signal<string | null>(null);
   protected readonly isDraggingFiles = signal<boolean>(false);
   protected readonly builtInExcelFiles = BUILT_IN_EXCEL_FILES;
+
+  // Sheet 4 System Total Screened Counts (Baseline Ground Truth from Excel Sheet 4)
+  protected readonly platformScreenedCounts = signal<Record<string, number>>({
+    S1M: 3635232,
+    IDAMS: 2439530,
+    PAPERCEPT: 115141,
+    TOTAL: 6189903,
+  });
+
+  protected readonly selectedPlatformScreenedCount = computed<string>(() => {
+    const platform = this.selectedPlatform();
+    const counts = this.platformScreenedCounts();
+    const count = counts[platform] ?? 0;
+    return `${count.toLocaleString('en-US')} Total Screened in ${platform}`;
+  });
 
   // Modal state
   protected readonly modalContext = signal<KpiModalContext | null>(null);
@@ -85,11 +100,12 @@ export class DashboardComponent {
 
   protected readonly reasonOptions: ReadonlyArray<{
     label: string;
-    value: 'ALL' | 'PAL' | 'PCL';
+    value: 'ALL' | 'PAL' | 'PCL' | 'SDN';
   }> = [
-    { label: 'All Reasons', value: 'ALL' },
+    { label: 'All alerts', value: 'ALL' },
     { label: 'PAL', value: 'PAL' },
     { label: 'PCL', value: 'PCL' },
+    { label: 'SDN', value: 'SDN' },
   ];
 
   protected readonly datePresets: ReadonlyArray<{
@@ -131,13 +147,16 @@ export class DashboardComponent {
       if (platform !== 'ALL' && record.source.toUpperCase() !== platform.toUpperCase()) {
         return false;
       }
-      // Reason filter (matches PAL or PCL with trim and trailing space safety)
+      // Reason filter (matches PAL, PCL, or SDN with trim and trailing space safety)
       if (reason !== 'ALL') {
         const recReason = (record.reason || '').trim().toUpperCase();
         if (reason === 'PAL' && recReason !== 'PAL' && record.category !== 'PAL') {
           return false;
         }
         if (reason === 'PCL' && recReason !== 'PCL' && record.category !== 'PCL') {
+          return false;
+        }
+        if (reason === 'SDN' && recReason !== 'SDN' && record.category !== 'SDN') {
           return false;
         }
       }
@@ -421,6 +440,11 @@ export class DashboardComponent {
       return recReason === 'PCL' || r.category === 'PCL';
     }).length;
 
+    const sdnAlerts = recs.filter((r) => {
+      const recReason = (r.reason || '').trim().toUpperCase();
+      return recReason === 'SDN' || r.category === 'SDN';
+    }).length;
+
     const palVsPclAlerts = `${palAlerts} PAL / ${pclAlerts} PCL`;
 
     // 4. New vs Recurring Authors: (First-time flagged authors / Total unique flagged authors) * 100
@@ -457,6 +481,7 @@ export class DashboardComponent {
       flaggedEventRateValue,
       palAlerts,
       pclAlerts,
+      sdnAlerts,
       palVsPclAlerts,
       uniqueFlaggedAuthors,
       firstTimeCount,
@@ -464,6 +489,13 @@ export class DashboardComponent {
       newVsRecurringAuthors,
     };
   });
+
+  // Leaderboard sorting state (default descending by Event Count)
+  protected readonly leaderboardSortOrder = signal<'asc' | 'desc'>('desc');
+
+  toggleLeaderboardSort(): void {
+    this.leaderboardSortOrder.update((order) => (order === 'desc' ? 'asc' : 'desc'));
+  }
 
   // Repeat Offender Leaderboard: authors with event count > 1
   protected readonly repeatOffenderLeaderboard = computed<RepeatOffender[]>(() => {
@@ -520,7 +552,10 @@ export class DashboardComponent {
       }
     }
 
-    list.sort((a, b) => b.eventCount - a.eventCount);
+    const sortOrder = this.leaderboardSortOrder();
+    list.sort((a, b) =>
+      sortOrder === 'desc' ? b.eventCount - a.eventCount : a.eventCount - b.eventCount
+    );
     return list;
   });
 
@@ -621,7 +656,7 @@ export class DashboardComponent {
     });
   });
 
-  // 1. Monthly Flagged-Event Trend: bar or line chart showing total valid events grouped by month from Decision_Date
+  // 1. Monthly sanctioned author: bar or line chart showing total valid events grouped by month from Decision_Date
   protected readonly monthlyTrendChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
     const MONTH_KEYS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -643,7 +678,7 @@ export class DashboardComponent {
     return {
       chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
       title: {
-        text: 'Monthly Flagged-Event Trend',
+        text: 'Monthly sanctioned author',
         align: 'left',
         style: {
           fontFamily: "'Fraunces', serif",
@@ -971,6 +1006,7 @@ export class DashboardComponent {
     const recs = this.filteredRecords();
     const pal = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL').length;
     const pcl = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL').length;
+    const sdn = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN').length;
 
     return {
       chart: { type: 'pie', height: 280, backgroundColor: 'transparent' },
@@ -1024,6 +1060,7 @@ export class DashboardComponent {
           data: [
             { name: 'PAL', y: pal, color: '#3C476A' },
             { name: 'PCL', y: pcl, color: '#A86A1E' },
+            { name: 'SDN', y: sdn, color: '#4A6F56' },
           ],
         },
       ],
