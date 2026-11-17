@@ -669,22 +669,51 @@
     renderPclMatchByCountry(events);
   }
 
-  // 1. Screening Reason Distribution (Donut Chart with counts & percentages)
+  // 1. Screening Reason Distribution (Donut Chart with clean data labels & readable tooltip)
   function renderScreeningReasonDonut(events) {
     const pal = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PAL').length;
     const pcl = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL').length;
     const total = pal + pcl;
 
-    const palPct = total > 0 ? ((pal / total) * 100).toFixed(1) : 0;
-    const pclPct = total > 0 ? ((pcl / total) * 100).toFixed(1) : 0;
+    const palPct = total > 0 ? ((pal / total) * 100).toFixed(1) : '0';
+    const pclPct = total > 0 ? ((pcl / total) * 100).toFixed(1) : '0';
 
     const ctx = document.getElementById('screeningReasonChart').getContext('2d');
     if (chartInstances.screeningReason) chartInstances.screeningReason.destroy();
 
+    // Custom inline plugin for clean data labels without duplication
+    const sliceLabelPlugin = {
+      id: 'sliceLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data) return;
+
+        const labels = [
+          `PAL: ${pal} (${palPct}%)`,
+          `PCL: ${pcl} (${pclPct}%)`
+        ];
+
+        ctx.save();
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        meta.data.forEach((element, index) => {
+          if (labels[index]) {
+            const { x, y } = element.tooltipPosition();
+            ctx.fillText(labels[index], x, y);
+          }
+        });
+        ctx.restore();
+      }
+    };
+
     chartInstances.screeningReason = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: [`PAL: ${pal} (${palPct}%)`, `PCL: ${pcl} (${pclPct}%)`],
+        labels: ['PAL', 'PCL'], // Legend reads cleanly as PAL and PCL
         datasets: [{
           data: [pal, pcl],
           backgroundColor: ['#3C476A', '#A86A1E'],
@@ -692,17 +721,32 @@
           borderColor: '#FFFFFF'
         }]
       },
+      plugins: [sliceLabelPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { font: { family: 'Inter', size: 12 }, padding: 16 }
+            labels: {
+              font: { family: 'Inter', size: 12, weight: '600' },
+              color: '#333333',
+              padding: 16
+            }
           },
           tooltip: {
+            backgroundColor: '#FFFFFF',
+            titleColor: '#333333',
+            bodyColor: '#333333',
+            borderColor: 'rgba(72,17,17,0.25)',
+            borderWidth: 1,
+            padding: 10,
+            displayColors: false,
+            titleFont: { size: 0 },
+            bodyFont: { family: 'Inter', size: 12, weight: '600' },
             callbacks: {
-              label: ctx => ` ${ctx.label}`
+              title: () => '',
+              label: ctx => `${ctx.label}: ${ctx.raw} events`
             }
           }
         },

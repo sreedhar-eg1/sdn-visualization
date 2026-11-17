@@ -971,9 +971,6 @@ export class DashboardComponent {
     const recs = this.filteredRecords();
     const pal = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL').length;
     const pcl = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL').length;
-    const total = pal + pcl;
-    const palPct = total > 0 ? ((pal / total) * 100).toFixed(1) : '0';
-    const pclPct = total > 0 ? ((pcl / total) * 100).toFixed(1) : '0';
 
     return {
       chart: { type: 'pie', height: 280, backgroundColor: 'transparent' },
@@ -986,12 +983,21 @@ export class DashboardComponent {
         enabled: true,
         align: 'center',
         verticalAlign: 'bottom',
-        itemStyle: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+        itemStyle: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#333333' },
       },
       tooltip: {
-        pointFormat: '<b>{point.y}</b> events ({point.percentage:.1f}%)',
+        useHTML: true,
+        headerFormat: '',
+        pointFormat: '<span style="color: #333333; font-family: Inter, sans-serif; font-size: 12px; font-weight: 600;">{point.name}: {point.y} events</span>',
         backgroundColor: '#FFFFFF',
-        borderColor: 'rgba(72, 17, 17, 0.18)',
+        borderColor: 'rgba(72, 17, 17, 0.25)',
+        borderRadius: 8,
+        shadow: true,
+        style: {
+          color: '#333333',
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '12px',
+        },
       },
       plotOptions: {
         pie: {
@@ -1000,7 +1006,13 @@ export class DashboardComponent {
           dataLabels: {
             enabled: true,
             format: '{point.name}: {point.y} ({point.percentage:.1f}%)',
-            style: { fontFamily: "'Inter', sans-serif", fontSize: '11px', color: '#481111' },
+            style: {
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '11px',
+              color: '#333333',
+              textOutline: 'none',
+              fontWeight: '600',
+            },
           },
           showInLegend: true,
         },
@@ -1010,8 +1022,8 @@ export class DashboardComponent {
           type: 'pie',
           name: 'Screening Reasons',
           data: [
-            { name: `PAL: ${pal} (${palPct}%)`, y: pal, color: '#3C476A' },
-            { name: `PCL: ${pcl} (${pclPct}%)`, y: pcl, color: '#A86A1E' },
+            { name: 'PAL', y: pal, color: '#3C476A' },
+            { name: 'PCL', y: pcl, color: '#A86A1E' },
           ],
         },
       ],

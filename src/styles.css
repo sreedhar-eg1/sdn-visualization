@@ -27,3 +27,20 @@ body.mc {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(72, 17, 17, 0.35);
 }
+
+/* Highcharts & Chart Tooltip Visibility and Legibility */
+.highcharts-tooltip,
+.highcharts-tooltip-box {
+  color: #333333 !important;
+}
+
+.highcharts-tooltip text,
+.highcharts-tooltip span {
+  fill: #333333 !important;
+  color: #333333 !important;
+}
+
+.highcharts-tooltip-box {
+  fill: #FFFFFF !important;
+  stroke: rgba(72, 17, 17, 0.25) !important;
+}
