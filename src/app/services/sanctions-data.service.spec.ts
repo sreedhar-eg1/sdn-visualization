@@ -301,20 +301,14 @@ describe('SanctionsDataService', () => {
       buffer,
       'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx'
     );
-    expect(result.parsed).toBe(3); // 2 primary + 1 co-author (Co-Authors header skipped)
-    expect(result.added).toBe(3);
+    expect(result.parsed).toBe(2); // 2 valid records with Document_Source (base filter excludes empty Document_Source rows)
+    expect(result.added).toBe(2);
 
     const xie = service.records().find((r) => r.authorName === 'Xie, Prof. Hui');
     expect(xie?.documentId).toBe('65089637');
     expect(xie?.palId).toBe('4043');
     expect(xie?.category).toBe('PAL');
     expect(xie?.status).toBe('Red');
-    expect(xie?.coAuthors).toContain('Deng, Dr. Bo');
-
-    const deng = service.records().find((r) => r.authorName === 'Deng, Dr. Bo');
-    expect(deng?.documentId).toBe('65089637');
-    expect(deng?.status).toBe('Green');
-    expect(deng?.coAuthors).toContain('Xie, Prof. Hui');
 
     const lee = service.records().find((r) => r.authorName === 'Lee, Dr. Chien-Ding');
     expect(lee?.category).toBe('PCL');

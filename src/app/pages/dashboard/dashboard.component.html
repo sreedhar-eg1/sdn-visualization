@@ -111,23 +111,38 @@
 
     <!-- Filter Inputs Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end mt-4">
-      <!-- Source Dropdown -->
+      <!-- Platform Dropdown -->
       <div class="lg:col-span-3">
-        <span class="mc-label" style="margin-top: 0">Source</span>
+        <span class="mc-label" style="margin-top: 0">Platform</span>
         <select
           id="sourceFilter"
-          [ngModel]="selectedSource()"
-          (ngModelChange)="selectedSource.set($event)"
+          [ngModel]="selectedPlatform()"
+          (ngModelChange)="selectedPlatform.set($event)"
           class="mc-select"
         >
-          @for (opt of sourceOptions; track opt.value) {
+          @for (opt of platformOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Reason Dropdown -->
+      <div class="lg:col-span-2">
+        <span class="mc-label" style="margin-top: 0">Reason</span>
+        <select
+          id="reasonFilter"
+          [ngModel]="selectedReason()"
+          (ngModelChange)="selectedReason.set($event)"
+          class="mc-select"
+        >
+          @for (opt of reasonOptions; track opt.value) {
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
       </div>
 
       <!-- Date Range Preset -->
-      <div class="lg:col-span-3">
+      <div class="lg:col-span-2">
         <span class="mc-label" style="margin-top: 0">Date Range</span>
         <select
           id="datePreset"
@@ -166,8 +181,8 @@
       </div>
 
       <!-- Reports Dropdown -->
-      <div class="lg:col-span-2">
-        <span class="mc-label" style="margin-top: 0">Reports</span>
+      <div class="lg:col-span-1">
+        <span class="mc-label" style="margin-top: 0">Report</span>
         <select
           id="reportsFilter"
           [ngModel]="selectedReport()"
@@ -295,632 +310,135 @@
       </div>
     </section>
   } @else {
-    <!-- Executive KPI Summary Cards -->
-    <section aria-label="Executive KPI Summary" class="space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="mc-eyebrow">— Executive Screening Metrics</span>
-        <span class="mc-small">
-          Click any stat card to inspect <span class="mc-tag bad">Red</span> records
-        </span>
-      </div>
-
-      <div class="mc-grid-6">
-        <!-- 1. Flag Events -->
+    <!-- Top-Level Stats Refactoring (Exactly 4 Clean Cards) -->
+    <section aria-label="Top-Level Stats" class="space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 1. Total Flagged Events -->
         <button
           type="button"
           (click)="
             openRedModal(
-              'Flag Events — Red Escalations',
-              'All screening flag events tagged as Red across selected sources & dates.',
+              'Total Flagged Events',
+              'All valid flagged screening events after applying base filtering.',
               'ALL',
-              'flagEvents'
+              'totalFlaggedEvents'
             )
           "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().flagEvents ?? 0 }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().flagEventsRed ?? 0 }} Red</span>
+          <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
+            Total Flagged Events
           </div>
-          <div class="k">Flag Events</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>Inspect Red records</span>
-            <span class="arr">&rarr;</span>
+          <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
+            {{ kpiStats().totalFlaggedEvents }}
           </div>
         </button>
 
-        <!-- 2. Unique Documents -->
+        <!-- 2. PAL Alerts -->
         <button
           type="button"
           (click)="
             openRedModal(
-              'Unique Documents — Red Status',
-              'Distinct documents flagged with at least one Red compliance hit.',
-              'ALL',
-              'uniqueDocuments'
-            )
-          "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
-        >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().uniqueDocuments ?? 0 }}</div>
-            <span class="mc-tag ok">{{ kpiMetrics().greenDocuments ?? 0 }} Green</span>
-          </div>
-          <div class="k">Unique Documents</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>{{ kpiMetrics().redDocuments ?? 0 }} Red docs</span>
-            <span class="arr">&rarr;</span>
-          </div>
-        </button>
-
-        <!-- 3. Flagged Author Iden -->
-        <button
-          type="button"
-          (click)="
-            openRedModal(
-              'Flagged Author Identities',
-              'Red-status records associated with flagged primary author identities across PAL, PCL, and SDN.',
-              'ALL',
-              'flaggedAuthorIden'
-            )
-          "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
-        >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().flaggedAuthorIden ?? 0 }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().flaggedAuthorsRed ?? 0 }} Red</span>
-          </div>
-          <div class="k">Flagged Author Iden</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>Inspect Red authors</span>
-            <span class="arr">&rarr;</span>
-          </div>
-        </button>
-
-        <!-- 4. Co-author Records -->
-        <button
-          type="button"
-          (click)="
-            openRedModal(
-              'Co-author Records — Red Network',
-              'Red-tagged documents containing linked co-author screening records.',
-              'ALL',
-              'coAuthorRecords'
-            )
-          "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
-        >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().coAuthorRecords ?? 0 }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().coAuthorsRed ?? 0 }} Red</span>
-          </div>
-          <div class="k">Co-author Records</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>Inspect network</span>
-            <span class="arr">&rarr;</span>
-          </div>
-        </button>
-
-        <!-- 5. PAL Events -->
-        <button
-          type="button"
-          (click)="
-            openRedModal(
-              'PAL Events — Prohibited Author List',
-              'Documents and authors flagged as Red under Prohibited Author List (PAL) screening.',
+              'PAL Alerts',
+              'Screening alerts where the screening reason is PAL (Prohibited Author List).',
               'PAL',
-              'palEvents'
+              'palAlerts'
             )
           "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().palEvents ?? 0 }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().palRed ?? 0 }} Red</span>
+          <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
+            PAL Events
           </div>
-          <div class="k">PAL Events</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>Inspect PAL Red</span>
-            <span class="arr">&rarr;</span>
+          <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
+            {{ kpiStats().palAlerts }}
           </div>
         </button>
 
-        <!-- 6. PCL Events -->
+        <!-- 3. PCL Alerts -->
         <button
           type="button"
           (click)="
             openRedModal(
-              'PCL Events — Prohibited Country List',
-              'Documents and jurisdictions flagged as Red under Prohibited Country List (PCL) rules.',
+              'PCL Alerts',
+              'Screening alerts where the screening reason is PCL (Prohibited Country List).',
               'PCL',
-              'pclEvents'
+              'pclAlerts'
             )
           "
-          class="mc-card mc-stat text-left cursor-pointer hover:border-oxblood"
+          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="n">{{ kpiMetrics().pclEvents ?? 0 }}</div>
-            <span class="mc-tag bad">{{ kpiMetrics().pclRed ?? 0 }} Red</span>
+          <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
+            PCL Events
           </div>
-          <div class="k">PCL Events</div>
-          <div class="mc-small mt-3 flex items-center justify-between text-xs" style="opacity: 0.7">
-            <span>Inspect PCL Red</span>
-            <span class="arr">&rarr;</span>
+          <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
+            {{ kpiStats().pclAlerts }}
+          </div>
+        </button>
+
+        <!-- 4. Unique Flagged Authors -->
+        <button
+          type="button"
+          (click)="
+            openRedModal(
+              'Unique Flagged Authors',
+              'Distinct author email addresses across flagged screening records.',
+              'ALL',
+              'uniqueFlaggedAuthors'
+            )
+          "
+          class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
+        >
+          <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
+            Unique email values
+          </div>
+          <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
+            {{ kpiStats().uniqueFlaggedAuthors }}
           </div>
         </button>
       </div>
-
-      <!-- Single-Line PAL Organization Stat Card -->
-      <div class="mc-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 mt-3">
-        <div class="flex items-center gap-3">
-          <span class="mc-tag ok">PAL Stat</span>
-          <div>
-            <span class="mc-eyebrow text-xs">PAL Top Organization Frequency</span>
-            <div class="text-sm font-semibold" style="color: var(--mc-oxblood)">
-              {{ palTopOrganization().count > 0 ? palTopOrganization().organization : 'No Organization Found' }}
-            </div>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <div class="text-3xl font-serif font-bold" style="color: var(--mc-oxblood)">{{ palTopOrganization().count ?? 0 }}</div>
-          <span class="mc-small font-medium opacity-70">Highest Org Count</span>
-        </div>
-      </div>
     </section>
 
-    <!-- Surveillance Trends & Intelligence Section -->
-    @if (trendsSummary(); as tr) {
-      @if (tr.hasData) {
-        <section aria-label="Surveillance Trends and Hotspots" class="space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <span class="mc-eyebrow">— Surveillance Intelligence &bull; Trends &amp; Hotspots</span>
-              <h2 class="mc-h2">Screening Trends Analysis</h2>
-              <p class="mc-lead text-sm">
-                Key patterns, repeating submissions, and risk concentrations identified in active report:
-                <strong>{{ selectedReport() }}</strong> ({{ tr.totalRecords }} records analyzed).
-              </p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="mc-tag info">Live Trends</span>
-              <span class="mc-tag neutral">{{ tr.uniqueArticlesCount }} Unique Articles</span>
-            </div>
-          </div>
-
-          <!-- Trend Highlight Cards -->
-          <div class="mc-grid-3">
-            <!-- Trend Card 1: Most Submitted Article -->
-            <div class="mc-card mc-stat">
-              <div class="flex items-start justify-between gap-2">
-                <span class="mc-eyebrow text-xs" style="color: var(--mc-oxblood)">Most Submitted Article</span>
-                <span class="mc-tag bad">
-                  {{ tr.mostSubmittedArticle?.redCount || 0 }} Red
-                </span>
-              </div>
-
-              <div class="my-3">
-                <div class="flex items-baseline gap-2">
-                  <div class="n">{{ tr.mostSubmittedArticle?.submissionCount || 0 }}</div>
-                  <span class="mc-small font-medium">Submissions / Screenings</span>
-                </div>
-                <div class="k">Most Repeating Document in Report</div>
-
-                <div class="mt-3 p-3 rounded-lg" style="background: var(--mc-cream)">
-                  <h4 class="font-serif font-semibold text-sm line-clamp-2" style="color: var(--mc-oxblood)" [title]="tr.mostSubmittedArticle?.documentTitle">
-                    {{ tr.mostSubmittedArticle?.documentTitle || 'Untitled Document' }}
-                  </h4>
-
-                  <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span class="mc-code font-bold">Doc ID: {{ tr.mostSubmittedArticle?.documentId }}</span>
-                    @if (tr.mostSubmittedArticle?.manuscriptId) {
-                      <span class="mc-code font-bold">MS: {{ tr.mostSubmittedArticle?.manuscriptId }}</span>
-                    }
-                    @if (tr.mostSubmittedArticle?.journalName) {
-                      <span class="opacity-75 italic text-[11px] truncate max-w-[200px]" [title]="tr.mostSubmittedArticle?.journalName">
-                        {{ tr.mostSubmittedArticle?.journalName }}
-                      </span>
-                    }
-                  </div>
-
-                  @if (tr.mostSubmittedArticle?.primaryAuthor) {
-                    <div class="mt-1 text-xs opacity-80">
-                      Author: <strong>{{ tr.mostSubmittedArticle?.primaryAuthor }}</strong>
-                      @if ((tr.mostSubmittedArticle?.authors?.length || 0) > 1) {
-                        <span> (+{{ (tr.mostSubmittedArticle?.authors?.length || 1) - 1 }} co-authors)</span>
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <div class="mc-small pt-2 flex items-center justify-between text-xs" style="border-top: 1px solid var(--mc-line)">
-                <span>Pipeline Source(s):</span>
-                <strong class="mc-code">{{ tr.mostSubmittedArticle?.sources?.join(', ') || 'N/A' }}</strong>
-              </div>
-            </div>
-
-            <!-- Trend Card 2: Most REDs by Ingest Source -->
-            <div class="mc-card-dark mc-stat">
-              <div class="flex items-start justify-between gap-2">
-                <span class="mc-eyebrow text-xs" style="color: rgba(255,255,255,0.7)">Highest RED Risk Source</span>
-                <span class="mc-tag bad">Top Risk Source</span>
-              </div>
-
-              <div class="my-3">
-                <div class="flex items-baseline gap-2">
-                  <div class="n" style="color: #FFFFFF">{{ tr.topRedSource?.redCount || 0 }}</div>
-                  <span class="mc-small text-white/80 font-medium">RED Flag Events</span>
-                </div>
-                <div class="k" style="color: rgba(255,255,255,0.7)">Most REDs in Ingestion Pipelines</div>
-
-                <div class="mt-3 p-3 rounded-lg" style="background: rgba(255,255,255,0.08)">
-                  <div class="flex items-center justify-between gap-2">
-                    <h4 class="font-serif font-bold text-xl text-white">
-                      {{ tr.topRedSource?.source || 'N/A' }}
-                    </h4>
-                    <span class="mc-tag bad text-xs">
-                      {{ tr.topRedSource?.redPercentage || 0 }}% of all REDs
-                    </span>
-                  </div>
-
-                  <p class="text-xs text-white/70 mt-1">
-                    {{ tr.topRedSource?.redCount || 0 }} out of {{ tr.topRedSource?.totalCount || 0 }} total events in {{ tr.topRedSource?.source }} flagged as RED ({{ tr.topRedSource?.sourceRedRate || 0 }}% escalation rate).
-                  </p>
-
-                  <!-- Mini progress bar -->
-                  <div class="w-full bg-white/20 rounded-full h-2 mt-3 overflow-hidden">
-                    <div
-                      class="h-full rounded-full"
-                      style="background: var(--mc-bad);"
-                      [style.width.%]="tr.topRedSource?.sourceRedRate || 0"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mc-small pt-2 flex items-center justify-between text-xs text-white/70" style="border-top: 1px solid rgba(255,255,255,0.15)">
-                <span>Total Red Events in Report:</span>
-                <strong class="text-white">{{ kpiMetrics().flagEventsRed }} REDs</strong>
-              </div>
-            </div>
-
-            <!-- Trend Card 3: Key Entity & Jurisdiction Concentration -->
-            <div class="mc-card mc-stat">
-              <div class="flex items-start justify-between gap-2">
-                <span class="mc-eyebrow text-xs" style="color: var(--mc-oxblood)">Surveillance Concentrations</span>
-                <span class="mc-tag neutral">Entity &amp; Geo</span>
-              </div>
-
-              <div class="my-3 space-y-3">
-                <!-- Top Flagged Author -->
-                @if (tr.mostFlaggedAuthor; as auth) {
-                  <div class="p-3 rounded-lg" style="background: var(--mc-cream)">
-                    <div class="flex items-center justify-between gap-1">
-                      <span class="mc-eyebrow text-[10px]">Most Screened Author</span>
-                      <span class="mc-tag bad text-[10px]">{{ auth.redCount }} Red</span>
-                    </div>
-                    <div class="font-bold text-sm mt-1" style="color: var(--mc-oxblood)">{{ auth.name }}</div>
-                    <div class="text-xs opacity-75 truncate">{{ auth.organization || auth.country || 'N/A' }}</div>
-                    <div class="text-xs mt-1 opacity-60">{{ auth.submissionCount }} appearances in active report</div>
-                  </div>
-                }
-
-                <!-- Top Jurisdiction Hotspot -->
-                @if (tr.highestRiskJurisdiction; as geo) {
-                  <div class="p-3 rounded-lg" style="background: var(--mc-cream)">
-                    <div class="flex items-center justify-between gap-1">
-                      <span class="mc-eyebrow text-[10px]">Top Jurisdiction Hotspot</span>
-                      <span class="mc-tag bad text-[10px]">{{ geo.redCount }} Red</span>
-                    </div>
-                    <div class="font-bold text-sm mt-1" style="color: var(--mc-oxblood)">{{ geo.country }}</div>
-                    <div class="text-xs mt-1 opacity-60">{{ geo.flagCount }} total flagged submissions</div>
-                  </div>
-                }
-              </div>
-
-              <div class="mc-small pt-2 flex items-center justify-between text-xs" style="border-top: 1px solid var(--mc-line)">
-                <span>Dataset Mode:</span>
-                <strong class="mc-code">{{ dataService.datasetMode() }}</strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Trends Dynamic Charts: Most Appeared Journal, PCL Match by Country, Repeatedly Sanctioned Authors -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Trend Chart 1: Most Appeared Journal -->
-            <div class="mc-card">
-              <div class="mc-card-head">
-                <div>
-                  <span class="mc-eyebrow">— Journals</span>
-                  <h3 class="mc-h3">Most Appeared Journal</h3>
-                  <p class="mc-small">Top publication venues by submission frequency</p>
-                </div>
-                <span class="mc-tag neutral">Top Venues</span>
-              </div>
-              <div class="w-full min-h-[260px]">
-                <highcharts-chart
-                  [options]="journalTrendChartOptions()"
-                  [oneToOne]="true"
-                  class="block w-full h-[260px]"
-                />
-              </div>
-            </div>
-
-            <!-- Trend Chart 2: PCL Match by Country -->
-            <div class="mc-card">
-              <div class="mc-card-head">
-                <div>
-                  <span class="mc-eyebrow">— Jurisdictions</span>
-                  <h3 class="mc-h3">PCL Match by Country</h3>
-                  <p class="mc-small">Most frequent countries matched under PCL rules</p>
-                </div>
-                <span class="mc-tag warn">PCL Match</span>
-              </div>
-              <div class="w-full min-h-[260px]">
-                <highcharts-chart
-                  [options]="pclCountryTrendChartOptions()"
-                  [oneToOne]="true"
-                  class="block w-full h-[260px]"
-                />
-              </div>
-            </div>
-
-            <!-- Trend Chart 3: Repeatedly Sanctioned Authors -->
-            <div class="mc-card">
-              <div class="mc-card-head">
-                <div>
-                  <span class="mc-eyebrow">— Repeat Violations</span>
-                  <h3 class="mc-h3">Repeatedly Sanctioned Authors</h3>
-                  <p class="mc-small">Authors flagged Red multiple times with repeat count</p>
-                </div>
-                <span class="mc-tag bad">Leaderboard</span>
-              </div>
-              <div class="w-full min-h-[260px]">
-                <highcharts-chart
-                  [options]="repeatAuthorsChartOptions()"
-                  [oneToOne]="true"
-                  class="block w-full h-[260px]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Trends Split Detail View: Top Articles Leaderboard + Source Red Breakdown -->
-          <div class="mc-grid-2">
-            <!-- Left: Top Submitted / Repeating Articles Leaderboard -->
-            <div class="mc-card">
-              <div class="mc-card-head">
-                <div>
-                  <span class="mc-eyebrow">— Article Volume</span>
-                  <h3 class="mc-h3">Top Repeating Articles in Report</h3>
-                  <p class="mc-small">Ranked by repeating document submissions across screened pipelines</p>
-                </div>
-                <span class="mc-tag neutral">Top {{ tr.topSubmittedArticles.length }}</span>
-              </div>
-
-              <div class="mc-table-wrap overflow-x-auto">
-                <table class="mc-table w-full text-left text-xs">
-                  <thead>
-                    <tr>
-                      <th class="w-10">Rank</th>
-                      <th>Document &amp; Manuscript</th>
-                      <th>Primary Author</th>
-                      <th>Source(s)</th>
-                      <th class="text-right">Submissions</th>
-                      <th class="text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (art of tr.topSubmittedArticles; track art.documentId; let idx = $index) {
-                      <tr>
-                        <td class="font-mono font-bold text-center">#{{ idx + 1 }}</td>
-                        <td>
-                          <div class="font-semibold line-clamp-1" [title]="art.documentTitle">
-                            {{ art.documentTitle }}
-                          </div>
-                          <div class="mc-small flex items-center gap-2 mt-0.5">
-                            <span class="mc-code font-bold">Doc: {{ art.documentId }}</span>
-                            @if (art.manuscriptId) {
-                              <span class="mc-code">MS: {{ art.manuscriptId }}</span>
-                            }
-                          </div>
-                        </td>
-                        <td>
-                          <div class="font-medium">{{ art.primaryAuthor }}</div>
-                          @if (art.authors.length > 1) {
-                            <div class="text-[10px] opacity-60">+{{ art.authors.length - 1 }} co-author(s)</div>
-                          }
-                        </td>
-                        <td>
-                          <span class="mc-tag neutral text-[10px]">{{ art.sources.join(', ') }}</span>
-                        </td>
-                        <td class="text-right font-mono font-bold text-sm">
-                          {{ art.submissionCount }}
-                        </td>
-                        <td class="text-right">
-                          @if (art.redCount > 0) {
-                            <span class="mc-tag bad">{{ art.redCount }} Red</span>
-                          } @else {
-                            <span class="mc-tag ok">Cleared</span>
-                          }
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Right: Source Red Breakdown & Chart -->
-            <div class="mc-card-dark">
-              <div class="mc-card-head">
-                <div>
-                  <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Risk Concentration</span>
-                  <h3 class="mc-h3" style="color: #FFFFFF">RED Escalations by Ingest Source</h3>
-                  <p class="mc-small text-white/70">Breakdown of Red violations across editorial sources</p>
-                </div>
-                <span class="mc-tag">Source Mix</span>
-              </div>
-
-              <!-- Highcharts Source Red Trend Horizontal Column / Bar -->
-              <div class="w-full min-h-[220px]">
-                <highcharts-chart
-                  [options]="trendsSourceChartOptions()"
-                  [oneToOne]="true"
-                  class="block w-full h-[220px]"
-                />
-              </div>
-
-              <!-- Source Leaderboard List -->
-              <div class="space-y-2 mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.15)">
-                @for (src of tr.sourceRedBreakdown; track src.source) {
-                  <div class="flex items-center justify-between gap-3 p-2.5 rounded-lg" style="background: rgba(255,255,255,0.06)">
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-sm text-white">{{ src.source }}</span>
-                      @if (src.isTopSource) {
-                        <span class="mc-tag bad text-[10px]">Most REDs</span>
-                      }
-                    </div>
-                    <div class="flex items-center gap-3">
-                      <span class="text-xs text-white/70">
-                        {{ src.redPercentage }}% of all REDs
-                      </span>
-                      <span class="mc-tag bad font-mono font-bold">
-                        {{ src.redCount }} Red / {{ src.totalCount }}
-                      </span>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        </section>
-      }
-    }
-
-    <!-- Split Layout 1: Watchlist Dispositions (White card, Left) & Reason Mix (Dark Cocoa card, Right) -->
-    <section aria-label="Watchlist Dispositions and Reason Mix" class="mc-split">
-      <!-- Left: Watchlist Dispositions in white .mc-card -->
-      <div class="mc-card space-y-4">
-        <div class="mc-card-head">
-          <div>
-            <span class="mc-eyebrow">— Dispositions</span>
-            <h3 class="mc-h3">Watchlist Dispositions</h3>
-            <p class="mc-small">Red-flagged escalations vs cleared documents across lists</p>
-          </div>
-          <span class="mc-tag info">PAL &bull; PCL &bull; SDN</span>
-        </div>
-
-        <div class="space-y-3">
-          @for (item of watchlistDispositions(); track item.category) {
-            <button
-              type="button"
-              (click)="
-                openRedModal(
-                  item.label + ' Disposition — Red Flagged Documents',
-                  'Showing Red-tagged documents matched against ' + item.fullName + ' (' + item.label + ').',
-                  item.category,
-                  'disposition-' + item.category
-                )
-              "
-              class="mc-tile w-full text-left cursor-pointer hover:opacity-95 transition-all block"
-            >
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <div>
-                  <div class="t font-semibold">{{ item.label }} Documents</div>
-                  <div class="mc-small">{{ item.fullName }}</div>
-                </div>
-                <div class="mc-code font-bold">{{ item.totalDocs ?? 0 }} Unique Docs</div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 mt-2">
-                <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
-                  <span class="mc-tag bad">Red</span>
-                  <span class="mc-num font-bold text-lg" style="color: var(--mc-bad)">{{ item.redDocs ?? 0 }}</span>
-                </div>
-                <div class="mc-tile is-top flex items-center justify-between py-2 px-3">
-                  <span class="mc-tag ok">Green</span>
-                  <span class="mc-num font-bold text-lg" style="color: var(--mc-ok)">{{ item.greenDocs ?? 0 }}</span>
-                </div>
-              </div>
-            </button>
-          }
-        </div>
-
-        <p class="mc-small mt-2">
-          Documents matching multiple watchlists (e.g., <span class="mc-code">SDN|PAL</span>) are counted under each matched list.
-        </p>
-      </div>
-
-      <!-- Right: Reason Mix Pie Chart in dark cocoa .mc-card-dark -->
-      <div class="mc-card-dark">
-        <div class="mc-card-head">
-          <div>
-            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Categorical Mix</span>
-            <h3 class="mc-h3" style="color: #FFFFFF">Watchlist Reason Mix</h3>
-          </div>
-          <span class="mc-tag">Pie Chart</span>
-        </div>
-
+    <!-- Charts & Visualizations Setup (4 Clean Minimal Charts in 2x2 Grid) -->
+    <section aria-label="Visualizations Setup" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Chart 1: Monthly Flagged-Event Trend -->
+      <div class="mc-card p-5">
         <div class="w-full min-h-[320px]">
           <highcharts-chart
-            [options]="reasonMixChartOptions()"
+            [options]="monthlyTrendChartOptions()"
             [oneToOne]="true"
             class="block w-full h-[320px]"
           />
         </div>
       </div>
-    </section>
 
-    <!-- Split Layout 2: Detailed Results & Charts Grid (.mc-grid-2) -->
-    <section aria-label="Country and Source Analysis" class="mc-grid-2">
-      <!-- Chart 1: PCL Breakdown (White .mc-card) -->
-      <div class="mc-card relative">
-        <div class="mc-card-head">
-          <div>
-            <span class="mc-eyebrow">— Jurisdictions</span>
-            <h3 class="mc-h3">PCL Breakdown by Country</h3>
-          </div>
-          <span class="mc-tag neutral">Column</span>
-        </div>
-
-        <div class="w-full min-h-[320px] relative">
-          <highcharts-chart
-            [options]="pclChartOptions()"
-            [oneToOne]="true"
-            class="block w-full h-[320px]"
-          />
-          @if (pclEventCount() === 0) {
-            <div
-              class="absolute inset-0 flex items-center justify-center bg-white/90 rounded-2xl p-6 text-center"
-            >
-              <div class="max-w-sm">
-                <p class="mc-body font-semibold">
-                  No PCL-tagged records in this dataset slice
-                </p>
-                <p class="mc-small mt-1">
-                  The uploaded Excel sample contains PAL and SDN matches. Switch to
-                  <strong>Combined: Mock + Excel</strong> to view PCL country breakdowns alongside the Excel rows.
-                </p>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-
-      <!-- Chart 2: Flag Events by Source (Dark Cocoa .mc-card-dark) -->
-      <div class="mc-card-dark">
-        <div class="mc-card-head">
-          <div>
-            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">— Ingest Pipelines</span>
-            <h3 class="mc-h3" style="color: #FFFFFF">Flag Events by Source</h3>
-          </div>
-          <span class="mc-tag">Bar / Column</span>
-        </div>
-
+      <!-- Chart 2: Screening Reason Distribution -->
+      <div class="mc-card p-5">
         <div class="w-full min-h-[320px]">
           <highcharts-chart
-            [options]="sourceChartOptions()"
+            [options]="reasonDistributionChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[320px]"
+          />
+        </div>
+      </div>
+
+      <!-- Chart 3: Events by Platform -->
+      <div class="mc-card p-5">
+        <div class="w-full min-h-[320px]">
+          <highcharts-chart
+            [options]="platformChartOptions()"
+            [oneToOne]="true"
+            class="block w-full h-[320px]"
+          />
+        </div>
+      </div>
+
+      <!-- Chart 4: PCL Match by Country -->
+      <div class="mc-card p-5">
+        <div class="w-full min-h-[320px]">
+          <highcharts-chart
+            [options]="pclCountryChartOptions()"
             [oneToOne]="true"
             class="block w-full h-[320px]"
           />
@@ -928,23 +446,82 @@
       </div>
     </section>
 
-    <!-- Full-Width Chart: Daily Decision Events Trend in .mc-card -->
-    <section aria-label="Daily Decision Events Trend" class="mc-card">
-      <div class="mc-card-head">
+    <!-- Records Inspection & Export Table -->
+    <section aria-label="Screened Records Table" class="mc-card">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3" style="border-bottom: 1px solid var(--mc-line)">
         <div>
-          <span class="mc-eyebrow">— Temporal Analysis</span>
-          <h3 class="mc-h3">Daily Decision Events Trend</h3>
-          <p class="mc-small">Daily screening trajectory across Total, Red Flagged, and Green Cleared decisions</p>
+          <span class="mc-eyebrow">— Record Inspection</span>
+          <h3 class="mc-h3">Screened Records ({{ filteredRecords().length }})</h3>
         </div>
-        <span class="mc-tag neutral">Spline</span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="exportReportBriefExcel()"
+            class="mc-btn mc-btn-sm"
+          >
+            <span>Export Excel</span>
+            <span class="arr">&rarr;</span>
+          </button>
+          <button
+            type="button"
+            (click)="exportReportBriefCsv()"
+            class="mc-btn mc-btn-ghost mc-btn-sm"
+          >
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
-      <div class="w-full min-h-[320px]">
-        <highcharts-chart
-          [options]="dailyTrendChartOptions()"
-          [oneToOne]="true"
-          class="block w-full h-[320px]"
-        />
+      <div class="mc-table-wrap overflow-x-auto mt-4">
+        <table class="mc-table w-full text-left text-xs">
+          <thead>
+            <tr>
+              <th>Document ID</th>
+              <th>Platform</th>
+              <th>Reason</th>
+              <th>Author Name</th>
+              <th>Email</th>
+              <th>Country</th>
+              <th>Decision Date</th>
+              <th class="text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rec of filteredRecords().slice(0, 15); track rec.id) {
+              <tr>
+                <td class="font-mono font-semibold">{{ rec.documentId }}</td>
+                <td><span class="mc-tag neutral text-xs">{{ rec.source }}</span></td>
+                <td>
+                  <span
+                    class="mc-tag text-xs font-semibold"
+                    [class.warn]="rec.reason === 'PCL'"
+                    [class.info]="rec.reason === 'PAL'"
+                  >
+                    {{ rec.reason }}
+                  </span>
+                </td>
+                <td class="font-medium">{{ rec.authorName }}</td>
+                <td class="font-mono text-xs opacity-80">{{ rec.authorEmail || '—' }}</td>
+                <td>{{ rec.country }}</td>
+                <td class="font-mono">{{ rec.decisionDate }}</td>
+                <td class="text-right">
+                  <span
+                    class="mc-tag"
+                    [class.bad]="rec.status === 'Red'"
+                    [class.ok]="rec.status === 'Green'"
+                  >
+                    {{ rec.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (filteredRecords().length > 15) {
+          <div class="text-center py-2 text-xs opacity-60">
+            Showing first 15 of {{ filteredRecords().length }} records. Export to Excel or CSV for the complete report.
+          </div>
+        }
       </div>
     </section>
   }

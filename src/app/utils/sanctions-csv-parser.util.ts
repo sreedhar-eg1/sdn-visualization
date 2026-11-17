@@ -80,8 +80,8 @@ function safeJsonParse<T>(raw: string | undefined, fallback: T): T {
 }
 
 function normalizeCountry(raw: string): string {
-  const trimmed = cleanText(raw);
-  if (!trimmed) return 'Unspecified';
+  const trimmed = cleanText(raw).replace(/[\[\]]/g, '').trim();
+  if (!trimmed) return 'Not recorded';
   if (/^p\.?\s*r\.?\s*china$/i.test(trimmed)) return 'China';
   return trimmed;
 }
@@ -296,7 +296,7 @@ export function parseSanctionsTableRows(
   const authorLastIdx = findCol('authorlastname', 'lastname');
   const emailIdx = findCol('authoremailaddress', 'email', 'authoremail');
   const statusIdx = findCol('status');
-  const sourceIdx = findCol('documentsource', 'source');
+  const sourceIdx = findCol('documentsource', 'source', 'platform');
   const journalIdx = findCol('journalname', 'journal');
   const docTitleIdx = findCol('documenttitle', 'title');
   const docTypeIdx = findCol('documenttype', 'type');
@@ -332,12 +332,18 @@ export function parseSanctionsTableRows(
     const row = rows[rIdx];
     const getVal = (idx: number): string => (idx >= 0 && idx < row.length ? cleanText(row[idx]) : '');
 
+    // Strict Base Filter: Filter out any row where the Document_Source (or Platform) column is empty/null.
+    // All subsequent metrics must be calculated ONLY on these valid records.
+    const rawSource = sourceIdx >= 0 ? getVal(sourceIdx) : (sheetName || '');
+    if (!rawSource) {
+      continue;
+    }
+
     const rawAuthor =
       getVal(authorNameIdx) ||
       `${getVal(authorFirstIdx)} ${getVal(authorLastIdx)}`.trim();
 
     if (/^co-?authors?$/i.test(rawAuthor)) {
-      isCoAuthorsSection = true;
       continue;
     }
 
@@ -413,16 +419,21 @@ export function parseSanctionsTableRows(
       cleanText(affilObj.organisationDivision) ||
       'Unspecified Affiliation';
 
-    const rawReason = getVal(reasonIdx);
+    const rawReason = getVal(reasonIdx).trim();
+    let exactReason = rawReason;
+    if (/^pal$/i.test(rawReason)) exactReason = 'PAL';
+    else if (/^pcl$/i.test(rawReason)) exactReason = 'PCL';
+    else if (/^sdn$/i.test(rawReason)) exactReason = 'SDN';
+
     const palHits = safeJsonParse<RawMatchHit[]>(getVal(palScoreIdx), []);
     const sdnHits = safeJsonParse<RawMatchHit[]>(getVal(sdnScoreIdx), []);
     const pclHits = safeJsonParse<RawMatchHit[]>(getVal(pclScoreIdx), []);
 
     const matchedTerms: ScreeningCategory[] = [];
     if (!isCoAuthorsSection) {
-      if (/pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
-      if (/pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
-      if (/sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
+      if (exactReason === 'PCL' || /pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
+      if (exactReason === 'PAL' || /pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
+      if (exactReason === 'SDN' || /sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
       if (matchedTerms.length === 0) {
         const parsed = parseMatchedTerms(rawReason);
         if (parsed.length > 0) {
@@ -433,9 +444,9 @@ export function parseSanctionsTableRows(
       }
     }
 
-    const primaryCategory: ScreeningCategory = matchedTerms.includes('PCL')
+    const primaryCategory: ScreeningCategory = exactReason === 'PCL' || matchedTerms.includes('PCL')
       ? 'PCL'
-      : matchedTerms.includes('SDN')
+      : exactReason === 'SDN' || matchedTerms.includes('SDN')
         ? 'SDN'
         : 'PAL';
 
@@ -446,8 +457,10 @@ export function parseSanctionsTableRows(
         ? normalizeStatus(rowStatusRaw)
         : currentStatus;
 
-    let reasonText = rawReason;
-    if (isCoAuthorsSection && !rawReason) {
+    let reasonText = exactReason || rawReason;
+    if (exactReason === 'PAL' || exactReason === 'PCL' || exactReason === 'SDN') {
+      reasonText = exactReason;
+    } else if (isCoAuthorsSection && !rawReason) {
       reasonText = `Co-Author on Document ${currentDocId}`;
     } else if (!reasonText) {
       const parts = matchedTerms.map((t) =>
@@ -482,8 +495,9 @@ export function parseSanctionsTableRows(
     const comments = getVal(commentsIdx);
     const notes = comments && comments !== '[]' ? `${organization}. ${comments}` : `${organization} (${currentDocType}).`;
 
+    const sheetTag = sheetName ? sheetName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'sheet';
     parsedRecords.push({
-      id: `${batchId}-${rowId}-${rIdx}`,
+      id: `${batchId}-${sheetTag}-${rowId}-${rIdx}`,
       documentId: currentDocId,
       documentTitle: currentDocTitle,
       manuscriptId: currentManuscriptId || undefined,

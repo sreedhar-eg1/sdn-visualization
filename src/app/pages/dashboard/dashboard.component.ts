@@ -47,7 +47,9 @@ export class DashboardComponent {
   private readonly initialRange = this.dataService.getDateRangeForPreset('ALL_DATES');
 
   // Filter signals
-  protected readonly selectedSource = signal<ScreeningSource | 'ALL'>('ALL');
+  protected readonly selectedPlatform = signal<ScreeningSource | 'ALL'>('ALL');
+  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL'>('ALL');
+  protected readonly selectedSource = this.selectedPlatform; // Alias for backward compatibility
   protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
   protected readonly startDate = signal<string>(this.initialRange.start);
   protected readonly endDate = signal<string>(this.initialRange.end);
@@ -60,14 +62,24 @@ export class DashboardComponent {
   // Modal state
   protected readonly modalContext = signal<KpiModalContext | null>(null);
 
-  protected readonly sourceOptions: ReadonlyArray<{
+  protected readonly platformOptions: ReadonlyArray<{
     label: string;
     value: ScreeningSource | 'ALL';
   }> = [
-    { label: 'All Sources', value: 'ALL' },
-    { label: 'PAPERCEPT', value: 'PAPERCEPT' },
+    { label: 'All Platforms', value: 'ALL' },
     { label: 'S1M', value: 'S1M' },
-    { label: 'IDAMS', value: 'IDAMS' }
+    { label: 'IDAMS', value: 'IDAMS' },
+    { label: 'PAPERCEPT', value: 'PAPERCEPT' },
+  ];
+  protected readonly sourceOptions = this.platformOptions; // Alias
+
+  protected readonly reasonOptions: ReadonlyArray<{
+    label: string;
+    value: 'ALL' | 'PAL' | 'PCL';
+  }> = [
+    { label: 'All Reasons', value: 'ALL' },
+    { label: 'PAL', value: 'PAL' },
+    { label: 'PCL', value: 'PCL' },
   ];
 
   protected readonly datePresets: ReadonlyArray<{
@@ -96,17 +108,30 @@ export class DashboardComponent {
     { label: 'Authors History', value: 'Authors History' },
   ];
 
-  // Filtered dataset based on DatasetMode + Source + Date Range + optional Report country focus
+  // Filtered dataset based on Base Filter + Platform + Reason + Date Range
   protected readonly filteredRecords = computed<SanctionsRecord[]>(() => {
-    const source = this.selectedSource();
+    const platform = this.selectedPlatform();
+    const reason = this.selectedReason();
     const start = this.startDate();
     const end = this.endDate();
     const preset = this.selectedPreset();
 
     return this.dataService.records().filter((record) => {
-      if (source !== 'ALL' && record.source !== source) {
+      // Platform filter
+      if (platform !== 'ALL' && record.source.toUpperCase() !== platform.toUpperCase()) {
         return false;
       }
+      // Reason filter (exact string match PAL or PCL)
+      if (reason !== 'ALL') {
+        const recReason = (record.reason || '').trim().toUpperCase();
+        if (reason === 'PAL' && recReason !== 'PAL' && record.category !== 'PAL') {
+          return false;
+        }
+        if (reason === 'PCL' && recReason !== 'PCL' && record.category !== 'PCL') {
+          return false;
+        }
+      }
+      // Date range filter
       if (preset !== 'ALL_DATES') {
         if (start && record.decisionDate < start) {
           return false;
@@ -361,70 +386,70 @@ export class DashboardComponent {
     () => this.filteredRecords().filter((r) => recordHasCategory(r, 'PCL')).length
   );
 
-  // Primary 6 KPI Metrics + SDN counts with strict primary-author mapping & zero fallback
-  protected readonly kpiMetrics = computed(() => {
+  // Top-Level Stats Refactoring (Exactly 4 Cards)
+  protected readonly kpiStats = computed(() => {
     const recs = this.filteredRecords();
-    const authorIdentityKey = (r: SanctionsRecord): string =>
-      r.authorEmail ? r.authorEmail.toLowerCase() : r.authorId;
 
-    const uniqueDocs = new Set(recs.map((r) => r.documentId));
+    // 1. Total Flagged Events (Count of all records after the base filter is applied)
+    const totalFlaggedEvents = recs.length;
 
-    // Precisely isolate primary authors (above Co-Authors delimiter) and co-authors
-    const primaryRecs = recs.filter((r) => !r.isCoAuthor);
-    const coAuthorRecs = recs.filter((r) => r.isCoAuthor);
-
-    const uniquePrimaryAuthors = new Set(primaryRecs.map(authorIdentityKey));
-    const flaggedPrimaryRedAuthors = new Set(
-      primaryRecs
-        .filter(
-          (r) =>
-            r.status === 'Red' &&
-            (recordHasCategory(r, 'PAL') ||
-              recordHasCategory(r, 'PCL') ||
-              recordHasCategory(r, 'SDN'))
-        )
-        .map(authorIdentityKey)
-    );
-
-    const totalCoAuthors =
-      coAuthorRecs.length > 0
-        ? coAuthorRecs.length
-        : recs.reduce((sum, r) => sum + r.coAuthorCount, 0);
-
-    const coAuthorsRed =
-      coAuthorRecs.length > 0
-        ? coAuthorRecs.filter((r) => r.status === 'Red').length
-        : recs
-            .filter((r) => r.status === 'Red')
-            .reduce((sum, r) => sum + r.coAuthorCount, 0);
-
-    const palEvents = primaryRecs.filter((r) => recordHasCategory(r, 'PAL'));
-    const pclEvents = primaryRecs.filter((r) => recordHasCategory(r, 'PCL'));
-    const sdnEvents = primaryRecs.filter((r) => recordHasCategory(r, 'SDN'));
-
-    const redDocsSet = new Set(
-      recs.filter((r) => r.status === 'Red').map((r) => r.documentId)
-    );
-    const greenDocsCount = Array.from(uniqueDocs).filter(
-      (docId) => !redDocsSet.has(docId)
+    // 2. PAL Alerts (Count of records where Reason is PAL)
+    const palAlerts = recs.filter(
+      (r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL'
     ).length;
 
+    // 3. PCL Alerts (Count of records where Reason is PCL)
+    const pclAlerts = recs.filter(
+      (r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL'
+    ).length;
+
+    // 4. Unique Flagged Authors (Count of unique email addresses from filtered records, converted to lowercase)
+    const emailSet = new Set<string>();
+    for (const r of recs) {
+      if (r.authorEmail) {
+        const email = r.authorEmail.trim().toLowerCase();
+        if (email) emailSet.add(email);
+      }
+    }
+    const uniqueFlaggedAuthors = emailSet.size;
+
     return {
-      flagEvents: recs.length ?? 0,
-      flagEventsRed: recs.filter((r) => r.status === 'Red').length ?? 0,
-      uniqueDocuments: uniqueDocs.size ?? 0,
-      redDocuments: redDocsSet.size ?? 0,
-      greenDocuments: greenDocsCount ?? 0,
-      flaggedAuthorIden: uniquePrimaryAuthors.size ?? 0,
-      flaggedAuthorsRed: flaggedPrimaryRedAuthors.size ?? 0,
-      coAuthorRecords: totalCoAuthors ?? 0,
-      coAuthorsRed: coAuthorsRed ?? 0,
-      palEvents: palEvents.length ?? 0,
-      palRed: palEvents.filter((r) => r.status === 'Red').length ?? 0,
-      pclEvents: pclEvents.length ?? 0,
-      pclRed: pclEvents.filter((r) => r.status === 'Red').length ?? 0,
-      sdnEvents: sdnEvents.length ?? 0,
-      sdnRed: sdnEvents.filter((r) => r.status === 'Red').length ?? 0,
+      totalFlaggedEvents,
+      palAlerts,
+      pclAlerts,
+      uniqueFlaggedAuthors,
+    };
+  });
+
+  // Primary KPI Metrics + SDN counts with strict primary-author mapping & zero fallback
+  protected readonly kpiMetrics = computed(() => {
+    const stats = this.kpiStats();
+    const recs = this.filteredRecords();
+    const redRecs = recs.filter((r) => r.status === 'Red');
+    const uniqueDocs = new Set(recs.map((r) => r.documentId));
+
+    return {
+      totalFlaggedEvents: stats.totalFlaggedEvents,
+      palAlerts: stats.palAlerts,
+      pclAlerts: stats.pclAlerts,
+      uniqueFlaggedAuthors: stats.uniqueFlaggedAuthors,
+      flagEvents: stats.totalFlaggedEvents,
+      flagEventsRed: redRecs.length,
+      uniqueDocuments: uniqueDocs.size,
+      redDocuments: new Set(redRecs.map((r) => r.documentId)).size,
+      greenDocuments: Array.from(uniqueDocs).filter(
+        (id) => !new Set(redRecs.map((r) => r.documentId)).has(id)
+      ).length,
+      flaggedAuthorIden: stats.uniqueFlaggedAuthors,
+      flaggedAuthorsRed: stats.uniqueFlaggedAuthors,
+      coAuthorRecords: 0,
+      coAuthorsRed: 0,
+      palEvents: stats.palAlerts,
+      palRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL')).length,
+      pclEvents: stats.pclAlerts,
+      pclRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL')).length,
+      sdnEvents: recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN').length,
+      sdnRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN')).length,
     };
   });
 
@@ -493,58 +518,45 @@ export class DashboardComponent {
     });
   });
 
-  // Chart 1: PCL Breakdown (Column chart by country)
-  protected readonly pclChartOptions = computed<Highcharts.Options>(() => {
-    const pclRecords = this.filteredRecords().filter((r) =>
-      recordHasCategory(r, 'PCL')
-    );
-    const countryMap = new Map<string, { red: number; green: number }>();
+  // 1. Monthly Flagged-Event Trend: bar or line chart showing total valid events grouped by month from Decision_Date
+  protected readonly monthlyTrendChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const MONTH_KEYS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthMap: Record<string, number> = {
+      '01': 0, '02': 1, '03': 2, '04': 3, '05': 4, '06': 5,
+      '07': 6, '08': 7, '09': 8, '10': 9, '11': 10, '12': 11,
+    };
+    const counts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    for (const rec of pclRecords) {
-      const current = countryMap.get(rec.country) ?? { red: 0, green: 0 };
-      if (rec.status === 'Red') current.red += 1;
-      else current.green += 1;
-      countryMap.set(rec.country, current);
+    for (const r of recs) {
+      if (r.decisionDate) {
+        const match = r.decisionDate.match(/^\d{4}-(\d{2})/);
+        if (match && monthMap[match[1]] !== undefined) {
+          counts[monthMap[match[1]]] += 1;
+        }
+      }
     }
-
-    const sorted = Array.from(countryMap.entries()).sort(
-      (a, b) => b[1].red + b[1].green - (a[1].red + a[1].green)
-    );
-
-    const categories = sorted.map(([country]) => country);
-    const redSeries = sorted.map(([, counts]) => counts.red);
-    const greenSeries = sorted.map(([, counts]) => counts.green);
 
     return {
       chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
       title: {
-        text: 'PCL Breakdown by Country',
+        text: 'Monthly Flagged-Event Trend',
         align: 'left',
         style: {
           fontFamily: "'Fraunces', serif",
           fontSize: '18px',
-          fontWeight: '400',
+          fontWeight: '500',
           color: '#481111',
-        },
-      },
-      subtitle: {
-        text: 'Prohibited Country List events split by Red (Flagged) vs Green (Cleared)',
-        align: 'left',
-        style: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '13px',
-          color: 'rgba(72, 17, 17, 0.62)',
         },
       },
       credits: { enabled: false },
       xAxis: {
-        categories,
-        crosshair: false,
-        lineColor: 'rgba(72, 17, 17, 0.14)',
+        categories: MONTH_KEYS,
+        lineColor: 'rgba(72, 17, 17, 0.15)',
         labels: {
           style: {
             fontFamily: "'Inter', sans-serif",
-            color: 'rgba(72, 17, 17, 0.75)',
+            color: '#481111',
             fontSize: '11px',
             fontWeight: '500',
           },
@@ -554,68 +566,260 @@ export class DashboardComponent {
         min: 0,
         allowDecimals: false,
         title: {
-          text: 'PCL Events',
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(72, 17, 17, 0.62)',
-            fontSize: '11px',
+          text: 'Events',
+          style: { fontFamily: "'Inter', sans-serif", color: 'rgba(72, 17, 17, 0.65)', fontSize: '11px' },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.08)',
+      },
+      legend: { enabled: false },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> events in {point.key}',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        column: {
+          borderRadius: 4,
+          color: '#3C476A',
+          dataLabels: {
+            enabled: true,
+            style: { fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 'bold', color: '#481111' },
           },
         },
-        stackLabels: {
-          enabled: true,
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            fontWeight: '600',
-            color: '#481111',
-            fontSize: '11px',
-          },
+      },
+      series: [
+        {
+          type: 'column',
+          name: 'Events',
+          data: counts,
         },
-        gridLineColor: 'rgba(72, 17, 17, 0.10)',
+      ],
+    };
+  });
+
+  // 2. Screening Reason Distribution: simple donut or pie chart showing PAL vs PCL split
+  protected readonly reasonDistributionChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const palCount = recs.filter(
+      (r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL'
+    ).length;
+    const pclCount = recs.filter(
+      (r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL'
+    ).length;
+
+    return {
+      chart: { type: 'pie', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'Screening Reason Distribution',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#481111',
+        },
+      },
+      credits: { enabled: false },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> alerts ({point.percentage:.1f}%)',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        pie: {
+          innerSize: '60%',
+          allowPointSelect: true,
+          cursor: 'pointer',
+          borderWidth: 0,
+          dataLabels: {
+            enabled: true,
+            format: '<b>{point.name}</b>: {point.y} ({point.percentage:.1f}%)',
+            style: {
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '11px',
+              color: '#481111',
+            },
+          },
+          showInLegend: true,
+        },
       },
       legend: {
-        enabled: true,
-        align: 'right',
-        verticalAlign: 'top',
         itemStyle: {
           fontFamily: "'Inter', sans-serif",
           fontSize: '11px',
           color: '#481111',
         },
       },
-      tooltip: {
-        shared: true,
-        shadow: false,
-        borderWidth: 1,
-        borderColor: 'rgba(72, 17, 17, 0.18)',
-        backgroundColor: '#FFFFFF',
-        style: { fontFamily: "'Inter', sans-serif", color: '#1D0E0A', fontSize: '12px' },
-      },
-      plotOptions: {
-        column: {
-          stacking: 'normal',
-          borderRadius: 4,
-          borderWidth: 0,
-          shadow: false,
-        },
-      },
       series: [
         {
-          id: 'pcl-red',
-          name: 'Red (Flagged)',
-          type: 'column',
-          data: redSeries,
-          color: '#B5524A',
-        },
-        {
-          id: 'pcl-green',
-          name: 'Green (Cleared)',
-          type: 'column',
-          data: greenSeries,
-          color: '#3E7D69',
+          type: 'pie',
+          name: 'Screening Reason',
+          data: [
+            { name: 'PAL', y: palCount, color: '#3C476A' },
+            { name: 'PCL', y: pclCount, color: '#A86A1E' },
+          ],
         },
       ],
     };
   });
+
+  // 3. Events by Platform: bar chart showing count of events across S1M, IDAMS, and PAPERCEPT
+  protected readonly platformChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const platforms = ['S1M', 'IDAMS', 'PAPERCEPT'];
+    const counts = platforms.map(
+      (p) => recs.filter((r) => r.source.toUpperCase() === p).length
+    );
+
+    return {
+      chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'Events by Platform',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#481111',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories: platforms,
+        lineColor: 'rgba(72, 17, 17, 0.15)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '600',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'Events',
+          style: { fontFamily: "'Inter', sans-serif", color: 'rgba(72, 17, 17, 0.65)', fontSize: '11px' },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.08)',
+      },
+      legend: { enabled: false },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> events on {point.key}',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        column: {
+          borderRadius: 4,
+          color: '#8B263E',
+          dataLabels: {
+            enabled: true,
+            style: { fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 'bold', color: '#481111' },
+          },
+        },
+      },
+      series: [
+        {
+          type: 'column',
+          name: 'Events',
+          data: counts,
+        },
+      ],
+    };
+  });
+
+  // 4. PCL Match by Country: horizontal bar chart showing cleaned country distribution for PCL matches
+  protected readonly pclCountryChartOptions = computed<Highcharts.Options>(() => {
+    const recs = this.filteredRecords();
+    const pclRecs = recs.filter(
+      (r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL'
+    );
+
+    const countryMap = new Map<string, number>();
+    for (const r of pclRecs) {
+      let country = (r.country || '').replace(/[\[\]]/g, '').trim();
+      if (!country || country === 'Unspecified') {
+        country = 'Not recorded';
+      }
+      countryMap.set(country, (countryMap.get(country) || 0) + 1);
+    }
+
+    const sorted = Array.from(countryMap.entries()).sort((a, b) => b[1] - a[1]);
+    const categories = sorted.length > 0 ? sorted.map(([c]) => c) : ['No PCL Matches'];
+    const data = sorted.length > 0 ? sorted.map(([, count]) => count) : [0];
+
+    return {
+      chart: { type: 'bar', height: 320, backgroundColor: 'transparent' },
+      title: {
+        text: 'PCL Match by Country',
+        align: 'left',
+        style: {
+          fontFamily: "'Fraunces', serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#481111',
+        },
+      },
+      credits: { enabled: false },
+      xAxis: {
+        categories,
+        lineColor: 'rgba(72, 17, 17, 0.15)',
+        labels: {
+          style: {
+            fontFamily: "'Inter', sans-serif",
+            color: '#481111',
+            fontSize: '11px',
+            fontWeight: '500',
+          },
+        },
+      },
+      yAxis: {
+        min: 0,
+        allowDecimals: false,
+        title: {
+          text: 'PCL Matches',
+          style: { fontFamily: "'Inter', sans-serif", color: 'rgba(72, 17, 17, 0.65)', fontSize: '11px' },
+        },
+        gridLineColor: 'rgba(72, 17, 17, 0.08)',
+      },
+      legend: { enabled: false },
+      tooltip: {
+        pointFormat: '<b>{point.y}</b> PCL matches for {point.key}',
+        backgroundColor: '#FFFFFF',
+        borderColor: 'rgba(72, 17, 17, 0.18)',
+        style: { fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1D0E0A' },
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 4,
+          color: '#A86A1E',
+          dataLabels: {
+            enabled: true,
+            style: { fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 'bold', color: '#481111' },
+          },
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          name: 'PCL Matches',
+          data,
+        },
+      ],
+    };
+  });
+
+  // Aliases for backward compatibility
+  protected readonly pclChartOptions = this.pclCountryChartOptions;
+  protected readonly sourceChartOptions = this.platformChartOptions;
+  protected readonly reasonMixChartOptions = this.reasonDistributionChartOptions;
+  protected readonly dailyTrendChartOptions = this.monthlyTrendChartOptions;
 
   // Trends Section Chart: RED Escalations by Source (Bar chart on dark cocoa card)
   protected readonly trendsSourceChartOptions = computed<Highcharts.Options>(() => {
@@ -1097,327 +1301,6 @@ export class DashboardComponent {
     };
   });
 
-  // Chart 2: Flag Events by Source (Column/Bar chart on dark cocoa card)
-  protected readonly sourceChartOptions = computed<Highcharts.Options>(() => {
-    const recs = this.filteredRecords();
-    const sources = this.dataService.availableSources();
-    const activeSources =
-      this.selectedSource() === 'ALL'
-        ? sources
-        : sources.filter((s) => s === this.selectedSource());
-
-    const counts = activeSources.map((src) => ({
-      name: src,
-      total: recs.filter((r) => r.source === src).length,
-      red: recs.filter((r) => r.source === src && r.status === 'Red').length,
-    }));
-
-    return {
-      chart: { type: 'column', height: 320, backgroundColor: 'transparent' },
-      title: {
-        text: 'Flag Events by Source',
-        align: 'left',
-        style: {
-          fontFamily: "'Fraunces', serif",
-          fontSize: '18px',
-          fontWeight: '400',
-          color: '#FFFFFF',
-        },
-      },
-      subtitle: {
-        text: 'Screening volume & Red escalations across ingest pipelines',
-        align: 'left',
-        style: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '13px',
-          color: 'rgba(255, 255, 255, 0.70)',
-        },
-      },
-      credits: { enabled: false },
-      xAxis: {
-        categories: counts.map((c) => c.name),
-        lineColor: 'rgba(255, 255, 255, 0.14)',
-        labels: {
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(255, 255, 255, 0.85)',
-            fontSize: '11px',
-            fontWeight: '500',
-          },
-        },
-      },
-      yAxis: {
-        min: 0,
-        allowDecimals: false,
-        title: {
-          text: 'Flag Events',
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(255, 255, 255, 0.70)',
-            fontSize: '11px',
-          },
-        },
-        gridLineColor: 'rgba(255, 255, 255, 0.12)',
-      },
-      legend: {
-        enabled: true,
-        align: 'right',
-        verticalAlign: 'top',
-        itemStyle: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '11px',
-          color: '#FFFFFF',
-        },
-      },
-      tooltip: {
-        shared: true,
-        shadow: false,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.20)',
-        backgroundColor: '#3E2923',
-        style: { fontFamily: "'Inter', sans-serif", color: '#FFFFFF', fontSize: '12px' },
-      },
-      plotOptions: {
-        column: {
-          borderRadius: 4,
-          borderWidth: 0,
-          shadow: false,
-          dataLabels: {
-            enabled: true,
-            style: {
-              fontFamily: "'Inter', sans-serif",
-              fontSize: '11px',
-              fontWeight: '500',
-              color: '#FFFFFF',
-              textOutline: 'none',
-            },
-          },
-        },
-      },
-      series: [
-        {
-          id: 'src-total',
-          name: 'Total Flag Events',
-          type: 'column',
-          data: counts.map((c) => c.total),
-          color: '#E6D0B5',
-        },
-        {
-          id: 'src-red',
-          name: 'Red Status',
-          type: 'column',
-          data: counts.map((c) => c.red),
-          color: '#B5524A',
-        },
-      ],
-    };
-  });
-
-  // Chart 3: Reason Mix (Pie chart on dark cocoa card)
-  protected readonly reasonMixChartOptions = computed<Highcharts.Options>(() => {
-    const recs = this.filteredRecords();
-    const palCount = recs.filter((r) => recordHasCategory(r, 'PAL')).length;
-    const pclCount = recs.filter((r) => recordHasCategory(r, 'PCL')).length;
-    const sdnCount = recs.filter((r) => recordHasCategory(r, 'SDN')).length;
-
-    return {
-      chart: { type: 'pie', height: 320, backgroundColor: 'transparent' },
-      title: {
-        text: 'Reason Mix Distribution',
-        align: 'left',
-        style: {
-          fontFamily: "'Fraunces', serif",
-          fontSize: '18px',
-          fontWeight: '400',
-          color: '#FFFFFF',
-        },
-      },
-      subtitle: {
-        text: 'Proportional share of PAL, PCL, and SDN watchlist triggers',
-        align: 'left',
-        style: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '13px',
-          color: 'rgba(255, 255, 255, 0.70)',
-        },
-      },
-      credits: { enabled: false },
-      tooltip: {
-        pointFormat: '<b>{point.y}</b> triggers ({point.percentage:.1f}%)',
-        shadow: false,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.20)',
-        backgroundColor: '#3E2923',
-        style: { fontFamily: "'Inter', sans-serif", color: '#FFFFFF', fontSize: '12px' },
-      },
-      plotOptions: {
-        pie: {
-          allowPointSelect: true,
-          cursor: 'pointer',
-          innerSize: '54%',
-          borderWidth: 0,
-          shadow: false,
-          dataLabels: {
-            enabled: true,
-            format: '<b>{point.name}</b>: {point.percentage:.1f}%',
-            style: {
-              fontFamily: "'Inter', sans-serif",
-              fontSize: '11px',
-              color: '#FFFFFF',
-              textOutline: 'none',
-            },
-          },
-          showInLegend: true,
-        },
-      },
-      legend: {
-        itemStyle: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '11px',
-          color: 'rgba(255, 255, 255, 0.85)',
-        },
-      },
-      series: [
-        {
-          id: 'reason-mix',
-          name: 'Screening Reason',
-          type: 'pie',
-          data: [
-            {
-              name: 'PCL (Prohibited Country List)',
-              y: pclCount,
-              color: '#A86A1E',
-            },
-            {
-              name: 'PAL (Prohibited Author List)',
-              y: palCount,
-              color: '#BBCDC6',
-            },
-            {
-              name: 'SDN (Watchlist / OFAC)',
-              y: sdnCount,
-              color: '#E6D0B5',
-            },
-          ],
-        },
-      ],
-    };
-  });
-
-  // Chart 4: Daily Decision Events (Spline chart on white card)
-  protected readonly dailyTrendChartOptions = computed<Highcharts.Options>(() => {
-    const recs = this.filteredRecords();
-    const dayMap = new Map<string, { total: number; red: number; green: number }>();
-
-    for (const rec of recs) {
-      const entry = dayMap.get(rec.decisionDate) ?? { total: 0, red: 0, green: 0 };
-      entry.total += 1;
-      if (rec.status === 'Red') entry.red += 1;
-      else entry.green += 1;
-      dayMap.set(rec.decisionDate, entry);
-    }
-
-    const sortedDays = Array.from(dayMap.keys()).sort();
-    const labels = sortedDays.map((iso) => iso.slice(5));
-
-    return {
-      chart: { type: 'spline', height: 320, backgroundColor: 'transparent' },
-      title: {
-        text: 'Daily Decision Events Trend',
-        align: 'left',
-        style: {
-          fontFamily: "'Fraunces', serif",
-          fontSize: '18px',
-          fontWeight: '400',
-          color: '#481111',
-        },
-      },
-      subtitle: {
-        text: 'Daily screening trajectory across Total, Red Flagged, and Green Cleared decisions',
-        align: 'left',
-        style: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '13px',
-          color: 'rgba(72, 17, 17, 0.62)',
-        },
-      },
-      credits: { enabled: false },
-      xAxis: {
-        categories: labels,
-        tickInterval: Math.max(1, Math.floor(labels.length / 8)),
-        lineColor: 'rgba(72, 17, 17, 0.14)',
-        labels: {
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(72, 17, 17, 0.75)',
-            fontSize: '11px',
-          },
-        },
-      },
-      yAxis: {
-        min: 0,
-        allowDecimals: false,
-        title: {
-          text: 'Decision Events',
-          style: {
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(72, 17, 17, 0.62)',
-            fontSize: '11px',
-          },
-        },
-        gridLineColor: 'rgba(72, 17, 17, 0.10)',
-      },
-      legend: {
-        enabled: true,
-        align: 'right',
-        verticalAlign: 'top',
-        itemStyle: {
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '11px',
-          color: '#481111',
-        },
-      },
-      tooltip: {
-        shared: true,
-        shadow: false,
-        borderWidth: 1,
-        borderColor: 'rgba(72, 17, 17, 0.18)',
-        backgroundColor: '#FFFFFF',
-        style: { fontFamily: "'Inter', sans-serif", color: '#1D0E0A', fontSize: '12px' },
-      },
-      plotOptions: {
-        spline: {
-          lineWidth: 2.5,
-          marker: { enabled: sortedDays.length <= 20, radius: 4 },
-          shadow: false,
-        },
-      },
-      series: [
-        {
-          id: 'daily-total',
-          name: 'Total Decisions',
-          type: 'spline',
-          data: sortedDays.map((d) => dayMap.get(d)?.total ?? 0),
-          color: '#3C476A',
-        },
-        {
-          id: 'daily-red',
-          name: 'Red Flagged',
-          type: 'spline',
-          data: sortedDays.map((d) => dayMap.get(d)?.red ?? 0),
-          color: '#B5524A',
-        },
-        {
-          id: 'daily-green',
-          name: 'Green Cleared',
-          type: 'spline',
-          data: sortedDays.map((d) => dayMap.get(d)?.green ?? 0),
-          color: '#3E7D69',
-        },
-      ],
-    };
-  });
-
   protected setDatasetMode(mode: DatasetMode): void {
     this.dataService.datasetMode.set(mode);
     if (mode === 'UPLOADED_ONLY') {
@@ -1542,7 +1425,8 @@ export class DashboardComponent {
   }
 
   protected resetFilters(): void {
-    this.selectedSource.set('ALL');
+    this.selectedPlatform.set('ALL');
+    this.selectedReason.set('ALL');
     this.selectedPreset.set('ALL_DATES');
     const range = this.dataService.getDateRangeForPreset('ALL_DATES');
     this.startDate.set(range.start);

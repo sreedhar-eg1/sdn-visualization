@@ -237,7 +237,7 @@ export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
     name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx',
     label: 'Sanctioned Report (2025 S1M, IDAMS, PAPERCEPT)',
     description: 'Full year 2025 multi-source screened author & document report',
-    recordCount: 2772,
+    recordCount: 465,
   },
   {
     name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx',
