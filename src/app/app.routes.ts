@@ -9,28 +9,28 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    title: 'Sanctions Intelligence | Sign In',
+    title: 'Sanctions Lens | Sign In',
     canActivate: [loginGuard],
     loadComponent: () =>
       import('./pages/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'dashboard',
-    title: 'Sanctions Intelligence | Executive Dashboard',
+    title: 'Sanctions Lens | Executive Dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
     path: 'reports',
-    title: 'Sanctions Intelligence | Reports & Export Hub',
+    title: 'Sanctions Lens | Reports & Export Hub',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/reports/reports.component').then((m) => m.ReportsComponent),
   },
   {
     path: 'admin',
-    title: 'Sanctions Intelligence | Admin Configuration',
+    title: 'Sanctions Lens | Admin Configuration',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/admin-config/admin-config.component').then(

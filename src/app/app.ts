@@ -20,7 +20,7 @@ import { HeaderComponent } from './components/header/header.component';
         <div class="mc-wrap">
           <div class="flex items-center gap-3">
             <span class="mc-wordmark" style="font-size: 20px">MolecularConnections</span>
-            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">Sanctions Intelligence</span>
+            <span class="mc-eyebrow" style="color: rgba(255,255,255,0.7)">Sanctions Lens</span>
           </div>
           <small>Runs on MC-hosted models &bull; PAL / PCL / OFAC Compliance &bull; No data leaves the MC environment</small>
         </div>
