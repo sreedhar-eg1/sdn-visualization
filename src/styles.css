@@ -44,3 +44,25 @@ body.mc {
   fill: #FFFFFF !important;
   stroke: rgba(72, 17, 17, 0.25) !important;
 }
+
+/* Ensure anchor and button links styled as mc-btn have high-contrast white text */
+a.mc-btn,
+button.mc-btn,
+label.mc-btn {
+  color: #ffffff !important;
+}
+a.mc-btn:hover,
+button.mc-btn:hover,
+label.mc-btn:hover {
+  color: #ffffff !important;
+}
+a.mc-btn.mc-btn-ghost,
+button.mc-btn.mc-btn-ghost,
+label.mc-btn.mc-btn-ghost {
+  color: var(--mc-oxblood) !important;
+}
+a.mc-btn.mc-btn-light,
+button.mc-btn.mc-btn-light,
+label.mc-btn.mc-btn-light {
+  color: var(--mc-oxblood) !important;
+}

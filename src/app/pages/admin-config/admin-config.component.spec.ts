@@ -96,4 +96,16 @@ describe('AdminConfigComponent', () => {
     expect(palNameWithTitle).toBeTruthy();
     expect(palNameWithTitle?.getAttribute('title')).toBeTruthy();
   });
+
+  it('should render the Live Console card with clearly visible View Dashboard button link', async () => {
+    const fixture = TestBed.createComponent(AdminConfigComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const viewDashboardBtn = el.querySelector('a[routerLink="/dashboard"].mc-btn');
+    expect(viewDashboardBtn).toBeTruthy();
+    expect(viewDashboardBtn?.textContent).toContain('View Dashboard');
+    expect((viewDashboardBtn as HTMLElement)?.style.color).toBe('rgb(255, 255, 255)');
+  });
 });

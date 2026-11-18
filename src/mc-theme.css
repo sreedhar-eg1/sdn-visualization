@@ -123,17 +123,29 @@ body.mc{background:var(--mc-cream);color:var(--mc-oxblood);font:15px/1.55 var(--
 .mc-card-dark .mc-stat .n{color:#fff}
 
 /* ---------- 6. Buttons ---------- */
-.mc-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:0;border-radius:var(--mc-pill);padding:14px 26px;font:500 14.5px var(--mc-sans);cursor:pointer;
+.mc-btn,
+.mc a.mc-btn,
+.mc button.mc-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:0;border-radius:var(--mc-pill);padding:14px 26px;font:500 14.5px var(--mc-sans);cursor:pointer;
   background:var(--mc-oxblood);color:#fff;text-decoration:none;transition:transform .15s,background .15s}
-.mc-btn:hover{background:var(--mc-oxblood-h);transform:translateY(-1px)}
+.mc-btn:hover,
+.mc a.mc-btn:hover,
+.mc button.mc-btn:hover{background:var(--mc-oxblood-h);color:#fff;transform:translateY(-1px)}
 .mc-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
 .mc-btn .arr{transition:transform .2s}
 .mc-btn:hover .arr{transform:translateX(3px)}
 .mc-btn-sm{padding:9px 16px;font-size:13px}
-.mc-btn-ghost{background:transparent;color:var(--mc-oxblood);border:1px solid var(--mc-line)}
-.mc-btn-ghost:hover{background:transparent;border-color:var(--mc-oxblood)}
-.mc-btn-light{background:#fff;color:var(--mc-oxblood)}            /* primary on dark */
-.mc-btn-light:hover{background:var(--mc-cream)}
+.mc-btn-ghost,
+.mc a.mc-btn-ghost,
+.mc button.mc-btn-ghost{background:transparent;color:var(--mc-oxblood);border:1px solid var(--mc-line)}
+.mc-btn-ghost:hover,
+.mc a.mc-btn-ghost:hover,
+.mc button.mc-btn-ghost:hover{background:transparent;color:var(--mc-oxblood);border-color:var(--mc-oxblood)}
+.mc-btn-light,
+.mc a.mc-btn-light,
+.mc button.mc-btn-light{background:#fff;color:var(--mc-oxblood)}            /* primary on dark */
+.mc-btn-light:hover,
+.mc a.mc-btn-light:hover,
+.mc button.mc-btn-light:hover{background:var(--mc-cream);color:var(--mc-oxblood)}
 .mc-card-dark .mc-btn-ghost,.mc-band .mc-btn-ghost{color:#fff;border-color:rgba(255,255,255,.3)}
 .mc-link{font-weight:500;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
 
