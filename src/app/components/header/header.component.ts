@@ -61,11 +61,6 @@ import { AuthService } from '../../services/auth.service';
             <span>Logout</span>
             <span class="arr">&rarr;</span>
           </button>
-        } @else {
-          <span class="mc-badge">
-            <span class="mc-dot"></span>
-            <span>Secure Surveillance Portal</span>
-          </span>
         }
       </div>
     </header>
