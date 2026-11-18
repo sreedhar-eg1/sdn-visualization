@@ -453,7 +453,7 @@
           <option value="ALL">All alerts</option>
           <option value="PAL">PAL</option>
           <option value="PCL">PCL</option>
-          <option value="SDN">SDN</option>
+          <option value="OFAC">OFAC</option>
         </select>
       </div>
     </div>
@@ -491,9 +491,9 @@
       <div class="kpi-value" id="kpiPclAlerts">125</div>
     </div>
 
-    <!-- Card 4: SDN Alerts (New Card) -->
+    <!-- Card 4: OFAC Alerts (New Card) -->
     <div class="kpi-card">
-      <span class="kpi-title">SDN Alerts</span>
+      <span class="kpi-title">OFAC Alerts</span>
       <div class="kpi-value" id="kpiSdnAlerts">0</div>
     </div>
 
@@ -511,7 +511,7 @@
   </section>
 
   <section class="overview-grid">
-    <!-- 1. Screening Reason Distribution (3-way Donut: PAL, PCL, SDN) -->
+    <!-- 1. Screening Reason Distribution (3-way Donut: PAL, PCL, OFAC) -->
     <div class="chart-card">
       <div class="chart-header">
         <h3 class="chart-title">Screening Reason Distribution</h3>
@@ -691,10 +691,14 @@
         if (selectedPlatform === 'IDAMS' && (!normSource.includes('IDAMS') || normSource.includes('S1M') || normSource.includes('PAPERCEPT'))) return false;
       }
 
-      // Reason filter with exact string trimming (handles PAL, PCL, and SDN)
+      // Reason filter with exact string trimming (handles PAL, PCL, and OFAC/SDN)
       if (selectedReason !== 'ALL') {
         const normReason = (r.reason || '').trim().toUpperCase();
-        if (normReason !== selectedReason) return false;
+        if (selectedReason === 'OFAC' || selectedReason === 'SDN') {
+          if (normReason !== 'OFAC' && normReason !== 'SDN') return false;
+        } else if (normReason !== selectedReason) {
+          return false;
+        }
       }
 
       return true;
@@ -729,9 +733,12 @@
     const pcl = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL').length;
     document.getElementById('kpiPclAlerts').textContent = pcl.toLocaleString();
 
-    // 4. SDN Alerts: Count where Reason === 'SDN' (.trim().toUpperCase())
-    const sdn = events.filter(r => (r.reason || '').trim().toUpperCase() === 'SDN').length;
-    document.getElementById('kpiSdnAlerts').textContent = sdn.toLocaleString();
+    // 4. OFAC Alerts: Count where Reason === 'OFAC' or 'SDN' (.trim().toUpperCase())
+    const ofac = events.filter(r => {
+      const re = (r.reason || '').trim().toUpperCase();
+      return re === 'OFAC' || re === 'SDN';
+    }).length;
+    document.getElementById('kpiSdnAlerts').textContent = ofac.toLocaleString();
 
     // 5. Unique Flagged Authors Email: Count of unique email addresses (.trim().toLowerCase())
     const emailCounts = new Map();
@@ -767,16 +774,19 @@
     renderPclMatchByCountry(events);
   }
 
-  // 1. Screening Reason Distribution (3-way Donut: PAL, PCL, and SDN)
+  // 1. Screening Reason Distribution (3-way Donut: PAL, PCL, and OFAC)
   function renderScreeningReasonDonut(events) {
     const pal = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PAL').length;
     const pcl = events.filter(r => (r.reason || '').trim().toUpperCase() === 'PCL').length;
-    const sdn = events.filter(r => (r.reason || '').trim().toUpperCase() === 'SDN').length;
-    const total = pal + pcl + sdn;
+    const ofac = events.filter(r => {
+      const re = (r.reason || '').trim().toUpperCase();
+      return re === 'OFAC' || re === 'SDN';
+    }).length;
+    const total = pal + pcl + ofac;
 
     const palPct = total > 0 ? ((pal / total) * 100).toFixed(1) : '0.0';
     const pclPct = total > 0 ? ((pcl / total) * 100).toFixed(1) : '0.0';
-    const sdnPct = total > 0 ? ((sdn / total) * 100).toFixed(1) : '0.0';
+    const ofacPct = total > 0 ? ((ofac / total) * 100).toFixed(1) : '0.0';
 
     const ctx = document.getElementById('screeningReasonChart').getContext('2d');
     if (chartInstances.screeningReason) chartInstances.screeningReason.destroy();
@@ -793,7 +803,7 @@
         const labels = [
           pal > 0 ? `PAL: ${pal} (${palPct}%)` : '',
           pcl > 0 ? `PCL: ${pcl} (${pclPct}%)` : '',
-          sdn > 0 ? `SDN: ${sdn} (${sdnPct}%)` : ''
+          ofac > 0 ? `OFAC: ${ofac} (${ofacPct}%)` : ''
         ];
 
         ctx.save();
@@ -815,9 +825,9 @@
     chartInstances.screeningReason = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['PAL', 'PCL', 'SDN'], // Clean legend reading strictly PAL, PCL, and SDN
+        labels: ['PAL', 'PCL', 'OFAC'], // Clean legend reading strictly PAL, PCL, and OFAC
         datasets: [{
-          data: total > 0 ? [pal, pcl, sdn] : [1],
+          data: total > 0 ? [pal, pcl, ofac] : [1],
           backgroundColor: total > 0 ? ['#3C476A', '#A86A1E', '#B5524A'] : ['rgba(72,17,17,0.08)'],
           borderWidth: 2,
           borderColor: '#FFFFFF'
@@ -1077,12 +1087,19 @@
             palCounts[idx]++;
           } else if (reason === 'PCL' || category === 'PCL' || reason.startsWith('PCL')) {
             pclCounts[idx]++;
-          } else if (reason === 'SDN' || category === 'SDN' || reason.startsWith('SDN')) {
+          } else if (
+            reason === 'OFAC' ||
+            reason === 'SDN' ||
+            category === 'OFAC' ||
+            category === 'SDN' ||
+            reason.startsWith('OFAC') ||
+            reason.startsWith('SDN')
+          ) {
             sdnCounts[idx]++;
           } else {
             if (reason.includes('PAL')) palCounts[idx]++;
             else if (reason.includes('PCL')) pclCounts[idx]++;
-            else if (reason.includes('SDN')) sdnCounts[idx]++;
+            else if (reason.includes('OFAC') || reason.includes('SDN')) sdnCounts[idx]++;
             else palCounts[idx]++;
           }
         }
@@ -1120,7 +1137,7 @@
             fill: false
           },
           {
-            label: 'SDN Alerts',
+            label: 'OFAC Alerts',
             data: sdnCounts,
             borderColor: '#4A6F56',
             backgroundColor: 'rgba(74, 111, 86, 0.1)',
@@ -1243,7 +1260,7 @@
       entry.total++;
       const reason = (r.reason || '').trim().toUpperCase();
       if (reason === 'PCL') entry.pcl++;
-      else if (reason === 'SDN') entry.sdn++;
+      else if (reason === 'OFAC' || reason === 'SDN') entry.sdn++;
       else entry.pal++;
     });
 
@@ -1277,7 +1294,7 @@
             borderRadius: 2
           },
           {
-            label: 'SDN (%)',
+            label: 'OFAC (%)',
             data: sdnPct.length > 0 ? sdnPct : [0],
             backgroundColor: '#B5524A',
             borderRadius: 2
@@ -1433,7 +1450,7 @@
       const tr = document.createElement('tr');
       let badgeClass = 'badge-pal';
       if (off.primaryReason === 'PCL') badgeClass = 'badge-pcl';
-      else if (off.primaryReason === 'SDN') badgeClass = 'badge-sdn';
+      else if (off.primaryReason === 'OFAC' || off.primaryReason === 'SDN') badgeClass = 'badge-sdn';
 
       const warningHtml = off.isHighRisk ? '<span class="badge badge-warn">Critical (&gt;3)</span>' : '';
 
@@ -1519,7 +1536,7 @@
           let rawReason = getVal(reasonIdx).trim().toUpperCase();
           let exactReason = 'PAL';
           if (rawReason.includes('PCL')) exactReason = 'PCL';
-          else if (rawReason.includes('SDN')) exactReason = 'SDN';
+          else if (rawReason.includes('SDN') || rawReason.includes('OFAC')) exactReason = 'OFAC';
 
           const email = getVal(emailIdx).toLowerCase();
           const author = getVal(authorIdx) || 'Unknown Author';

@@ -99,7 +99,8 @@ function parseMatchedTerms(raw: string): ScreeningCategory[] {
   const parts = cleanText(raw)
     .split('|')
     .map((p) => cleanText(p).toUpperCase())
-    .filter((p): p is ScreeningCategory => p === 'PAL' || p === 'PCL' || p === 'SDN');
+    .map((p) => (p === 'SDN' ? 'OFAC' : p))
+    .filter((p): p is ScreeningCategory => p === 'PAL' || p === 'PCL' || p === 'OFAC' || p === 'SDN');
   return parts.length > 0 ? Array.from(new Set(parts)) : ['PAL'];
 }
 
@@ -421,8 +422,8 @@ export function parseSanctionsTableRows(
       exactReason = 'PAL';
     } else if (upperReason === 'PCL' || /^\s*PCL\s*$/i.test(rawReason)) {
       exactReason = 'PCL';
-    } else if (upperReason === 'SDN' || /^\s*SDN\s*$/i.test(rawReason)) {
-      exactReason = 'SDN';
+    } else if (upperReason === 'SDN' || upperReason === 'OFAC' || /^\s*(SDN|OFAC)\s*$/i.test(rawReason)) {
+      exactReason = 'OFAC';
     }
 
     const palHits = safeJsonParse<RawMatchHit[]>(getVal(palScoreIdx), []);
@@ -433,7 +434,7 @@ export function parseSanctionsTableRows(
     if (!isCoAuthorsSection) {
       if (exactReason === 'PCL' || /pcl/i.test(rawReason) || pclHits.length > 0) matchedTerms.push('PCL');
       if (exactReason === 'PAL' || /pal/i.test(rawReason) || palHits.length > 0 || rawPalId.length > 0) matchedTerms.push('PAL');
-      if (exactReason === 'SDN' || /sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('SDN');
+      if (exactReason === 'OFAC' || /sdn|ofac/i.test(rawReason) || sdnHits.length > 0) matchedTerms.push('OFAC');
       if (matchedTerms.length === 0) {
         const parsed = parseMatchedTerms(rawReason);
         if (parsed.length > 0) {
@@ -446,8 +447,8 @@ export function parseSanctionsTableRows(
 
     const primaryCategory: ScreeningCategory = exactReason === 'PCL' || matchedTerms.includes('PCL')
       ? 'PCL'
-      : exactReason === 'SDN' || matchedTerms.includes('SDN')
-        ? 'SDN'
+      : exactReason === 'OFAC' || matchedTerms.includes('OFAC')
+        ? 'OFAC'
         : 'PAL';
 
     const rowStatusRaw = getVal(statusIdx);
@@ -458,13 +459,13 @@ export function parseSanctionsTableRows(
         : currentStatus;
 
     let reasonText = exactReason || rawReason;
-    if (exactReason === 'PAL' || exactReason === 'PCL' || exactReason === 'SDN') {
+    if (exactReason === 'PAL' || exactReason === 'PCL' || exactReason === 'OFAC') {
       reasonText = exactReason;
     } else if (isCoAuthorsSection && !rawReason) {
       reasonText = `Co-Author on Document ${currentDocId}`;
     } else if (!reasonText) {
       const parts = matchedTerms.map((t) =>
-        t === 'PAL' ? 'PAL Match' : t === 'SDN' ? 'SDN Match' : 'PCL Country Rule'
+        t === 'PAL' ? 'PAL Match' : t === 'OFAC' ? 'OFAC Match' : 'PCL Country Rule'
       );
       reasonText = parts.join(' + ') || 'Screening Alert';
     }
@@ -486,7 +487,7 @@ export function parseSanctionsTableRows(
       matchedParts.push(`PAL: ${topPal.formattedName ?? topPal.name}`);
     }
     if (topSdn?.formattedName || topSdn?.name) {
-      matchedParts.push(`SDN: ${topSdn.formattedName ?? topSdn.name}`);
+      matchedParts.push(`OFAC: ${topSdn.formattedName ?? topSdn.name}`);
     }
     if (topPcl?.name) {
       matchedParts.push(`PCL: ${topPcl.name}`);

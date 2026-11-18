@@ -311,7 +311,7 @@
                     class="mc-tag text-[10px]"
                     [class.bad]="rec.reason === 'PAL' || rec.category === 'PAL'"
                     [class.warn]="rec.reason === 'PCL' || rec.category === 'PCL'"
-                    [class.info]="rec.reason === 'SDN' || rec.category === 'SDN'"
+                    [class.info]="rec.reason === 'OFAC' || rec.category === 'OFAC' || rec.reason === 'SDN' || rec.category === 'SDN'"
                   >
                     {{ rec.reason || rec.category }}
                   </span>

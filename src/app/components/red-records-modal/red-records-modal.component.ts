@@ -18,7 +18,11 @@ import { exportRecordsToCsv } from '../../utils/csv-export.util';
 import { exportRecordsToExcel } from '../../utils/excel-export.util';
 
 function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
-  return (record.matchedTerms ?? [record.category]).includes(category);
+  const terms = record.matchedTerms ?? [record.category];
+  if (category === 'OFAC' || (category as string) === 'SDN') {
+    return terms.includes('OFAC') || (terms as string[]).includes('SDN');
+  }
+  return terms.includes(category);
 }
 
 @Component({
@@ -317,7 +321,7 @@ export class RedRecordsModalComponent {
     { label: 'All Red', value: 'ALL' },
     { label: 'PAL (Author)', value: 'PAL' },
     { label: 'PCL (Country)', value: 'PCL' },
-    { label: 'SDN (Entity)', value: 'SDN' },
+    { label: 'OFAC (Entity)', value: 'OFAC' },
   ];
 
   constructor() {

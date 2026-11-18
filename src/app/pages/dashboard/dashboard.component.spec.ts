@@ -45,7 +45,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Total Flagged Events');
     expect(text).toContain('PAL Alerts');
     expect(text).toContain('PCL Alerts');
-    expect(text).toContain('SDN Alerts');
+    expect(text).toContain('OFAC Alerts');
     expect(text).toContain('Unique Flagged Authors Email');
     expect(text).toContain('Repeat Offender Leaderboard');
   });
@@ -62,7 +62,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Total Flagged Events');
     expect(text).toContain('PAL Alerts');
     expect(text).toContain('PCL Alerts');
-    expect(text).toContain('SDN Alerts');
+    expect(text).toContain('OFAC Alerts');
     expect(text).toContain('Unique Flagged Authors Email');
 
     // Verify 3 restored visualizations exist
@@ -86,6 +86,7 @@ describe('DashboardComponent', () => {
     expect(kpi.totalFlaggedEvents).toBe(23);
     expect(kpi.palAlerts).toBe(11);
     expect(kpi.pclAlerts).toBe(0);
+    expect(kpi.ofacAlerts).toBe(12);
     expect(kpi.sdnAlerts).toBe(12);
     expect(kpi.palVsPclAlerts).toBe('11 PAL / 0 PCL');
     expect(kpi.flaggedEventRate).toContain('per 1,000 submissions');
@@ -148,7 +149,7 @@ describe('DashboardComponent', () => {
     // Filter by Reason PCL
     const reasonSelect = el.querySelector('#reasonFilter') as HTMLSelectElement;
     expect(reasonSelect).toBeTruthy();
-    expect(Array.from(reasonSelect.options).map((o) => o.value)).toContain('SDN');
+    expect(Array.from(reasonSelect.options).map((o) => o.value)).toContain('OFAC');
     reasonSelect.value = 'PCL';
     reasonSelect.dispatchEvent(new Event('change'));
     fixture.detectChanges();
@@ -308,18 +309,18 @@ describe('DashboardComponent', () => {
     expect(reasonChart.series?.length).toBe(3);
     const palSeries = reasonChart.series?.[0] as any;
     const pclSeries = reasonChart.series?.[1] as any;
-    const sdnSeries = reasonChart.series?.[2] as any;
+    const ofacSeries = reasonChart.series?.[2] as any;
 
     expect(palSeries.name).toBe('PAL Alerts');
     expect(pclSeries.name).toBe('PCL Alerts');
-    expect(sdnSeries.name).toBe('SDN Alerts');
+    expect(ofacSeries.name).toBe('OFAC Alerts');
 
     const palTotal = (palSeries.data as number[]).reduce((a, b) => a + b, 0);
     const pclTotal = (pclSeries.data as number[]).reduce((a, b) => a + b, 0);
-    const sdnTotal = (sdnSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const ofacTotal = (ofacSeries.data as number[]).reduce((a, b) => a + b, 0);
     expect(palTotal).toBe(3);
     expect(pclTotal).toBe(4);
-    expect(sdnTotal).toBe(0);
+    expect(ofacTotal).toBe(0);
 
     // 5. Dynamic Platform Filter: PAPERCEPT
     comp['selectedPlatform'].set('PAPERCEPT');
@@ -409,7 +410,7 @@ describe('DashboardComponent', () => {
 
     // Verify 3 distinct datasets
     expect(lineChart.series?.length).toBe(3);
-    const [palSeries, pclSeries, sdnSeries] = lineChart.series as any[];
+    const [palSeries, pclSeries, ofacSeries] = lineChart.series as any[];
 
     expect(palSeries.name).toBe('PAL Alerts');
     expect(palSeries.color).toBe('#3C476A');
@@ -417,16 +418,16 @@ describe('DashboardComponent', () => {
     expect(pclSeries.name).toBe('PCL Alerts');
     expect(pclSeries.color).toBe('#A86A1E');
 
-    expect(sdnSeries.name).toBe('SDN Alerts');
-    expect(sdnSeries.color).toBe('#4A6F56');
+    expect(ofacSeries.name).toBe('OFAC Alerts');
+    expect(ofacSeries.color).toBe('#4A6F56');
 
     // Verify sum across years matches total events
     const palTotal = (palSeries.data as number[]).reduce((a, b) => a + b, 0);
     const pclTotal = (pclSeries.data as number[]).reduce((a, b) => a + b, 0);
-    const sdnTotal = (sdnSeries.data as number[]).reduce((a, b) => a + b, 0);
+    const ofacTotal = (ofacSeries.data as number[]).reduce((a, b) => a + b, 0);
 
     expect(palTotal).toBe(kpi.palAlerts);
     expect(pclTotal).toBe(kpi.pclAlerts);
-    expect(sdnTotal).toBe(kpi.sdnAlerts);
+    expect(ofacTotal).toBe(kpi.ofacAlerts);
   });
 });

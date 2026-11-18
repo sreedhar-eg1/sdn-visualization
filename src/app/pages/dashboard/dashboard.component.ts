@@ -31,7 +31,11 @@ import { exportRecordsToExcel } from '../../utils/excel-export.util';
 import { parseAffiliationOrganization } from '../../utils/sanctions-csv-parser.util';
 
 function recordHasCategory(record: SanctionsRecord, category: ScreeningCategory): boolean {
-  return (record.matchedTerms ?? [record.category]).includes(category);
+  const terms = record.matchedTerms ?? [record.category];
+  if (category === 'OFAC' || (category as string) === 'SDN') {
+    return terms.includes('OFAC') || (terms as string[]).includes('SDN');
+  }
+  return terms.includes(category);
 }
 
 export const TOTAL_SUBMISSIONS_SCREENED = 150000;
@@ -58,7 +62,7 @@ export class DashboardComponent {
 
   // Filter signals
   protected readonly selectedPlatform = signal<ScreeningSource | 'ALL'>('ALL');
-  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL' | 'SDN'>('ALL');
+  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL' | 'OFAC' | 'SDN'>('ALL');
   protected readonly selectedSource = this.selectedPlatform; // Alias for backward compatibility
   protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
   protected readonly startDate = signal<string>(this.initialRange.start);
@@ -100,12 +104,12 @@ export class DashboardComponent {
 
   protected readonly reasonOptions: ReadonlyArray<{
     label: string;
-    value: 'ALL' | 'PAL' | 'PCL' | 'SDN';
+    value: 'ALL' | 'PAL' | 'PCL' | 'OFAC' | 'SDN';
   }> = [
     { label: 'All alerts', value: 'ALL' },
     { label: 'PAL', value: 'PAL' },
     { label: 'PCL', value: 'PCL' },
-    { label: 'SDN', value: 'SDN' },
+    { label: 'OFAC', value: 'OFAC' },
   ];
 
   protected readonly datePresets: ReadonlyArray<{
@@ -147,7 +151,7 @@ export class DashboardComponent {
       if (platform !== 'ALL' && record.source.toUpperCase() !== platform.toUpperCase()) {
         return false;
       }
-      // Reason filter (matches PAL, PCL, or SDN with trim and trailing space safety)
+      // Reason filter (matches PAL, PCL, or OFAC with trim and trailing space safety)
       if (reason !== 'ALL') {
         const recReason = (record.reason || '').trim().toUpperCase();
         if (reason === 'PAL' && recReason !== 'PAL' && record.category !== 'PAL') {
@@ -156,7 +160,13 @@ export class DashboardComponent {
         if (reason === 'PCL' && recReason !== 'PCL' && record.category !== 'PCL') {
           return false;
         }
-        if (reason === 'SDN' && recReason !== 'SDN' && record.category !== 'SDN') {
+        if (
+          (reason === 'OFAC' || (reason as string) === 'SDN') &&
+          recReason !== 'OFAC' &&
+          recReason !== 'SDN' &&
+          record.category !== 'OFAC' &&
+          (record.category as string) !== 'SDN'
+        ) {
           return false;
         }
       }
@@ -440,9 +450,14 @@ export class DashboardComponent {
       return recReason === 'PCL' || r.category === 'PCL';
     }).length;
 
-    const sdnAlerts = recs.filter((r) => {
+    const ofacAlerts = recs.filter((r) => {
       const recReason = (r.reason || '').trim().toUpperCase();
-      return recReason === 'SDN' || r.category === 'SDN';
+      return (
+        recReason === 'OFAC' ||
+        recReason === 'SDN' ||
+        r.category === 'OFAC' ||
+        (r.category as string) === 'SDN'
+      );
     }).length;
 
     const palVsPclAlerts = `${palAlerts} PAL / ${pclAlerts} PCL`;
@@ -481,7 +496,8 @@ export class DashboardComponent {
       flaggedEventRateValue,
       palAlerts,
       pclAlerts,
-      sdnAlerts,
+      ofacAlerts,
+      sdnAlerts: ofacAlerts,
       palVsPclAlerts,
       uniqueFlaggedAuthors,
       firstTimeCount,
@@ -559,12 +575,27 @@ export class DashboardComponent {
     return list;
   });
 
-  // Primary KPI Metrics + SDN counts with strict primary-author mapping & zero fallback
+  // Primary KPI Metrics + OFAC counts with strict primary-author mapping & zero fallback
   protected readonly kpiMetrics = computed(() => {
     const stats = this.kpiStats();
     const recs = this.filteredRecords();
     const redRecs = recs.filter((r) => r.status === 'Red');
     const uniqueDocs = new Set(recs.map((r) => r.documentId));
+    const ofacCount = recs.filter(
+      (r) =>
+        (r.reason || '').trim().toUpperCase() === 'OFAC' ||
+        (r.reason || '').trim().toUpperCase() === 'SDN' ||
+        r.category === 'OFAC' ||
+        (r.category as string) === 'SDN'
+    ).length;
+    const ofacRedCount = recs.filter(
+      (r) =>
+        r.status === 'Red' &&
+        ((r.reason || '').trim().toUpperCase() === 'OFAC' ||
+          (r.reason || '').trim().toUpperCase() === 'SDN' ||
+          r.category === 'OFAC' ||
+          (r.category as string) === 'SDN')
+    ).length;
 
     return {
       totalFlaggedEvents: stats.totalFlaggedEvents,
@@ -586,8 +617,10 @@ export class DashboardComponent {
       palRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL')).length,
       pclEvents: stats.pclAlerts,
       pclRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL')).length,
-      sdnEvents: recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN').length,
-      sdnRed: recs.filter((r) => r.status === 'Red' && ((r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN')).length,
+      ofacEvents: ofacCount,
+      ofacRed: ofacRedCount,
+      sdnEvents: ofacCount,
+      sdnRed: ofacRedCount,
     };
   });
 
@@ -624,7 +657,7 @@ export class DashboardComponent {
     };
   });
 
-  // Document Red vs Green breakdown across PAL, PCL, and SDN with zero fallback
+  // Document Red vs Green breakdown across PAL, PCL, and OFAC with zero fallback
   protected readonly watchlistDispositions = computed<CategoryRedGreenSummary[]>(() => {
     const recs = this.filteredRecords();
     const categories: ReadonlyArray<{
@@ -634,7 +667,7 @@ export class DashboardComponent {
     }> = [
       { category: 'PAL', label: 'PAL', fullName: 'Prohibited Author List' },
       { category: 'PCL', label: 'PCL', fullName: 'Prohibited Country List' },
-      { category: 'SDN', label: 'SDN', fullName: 'Specially Designated Nationals' },
+      { category: 'OFAC', label: 'OFAC', fullName: 'Office of Foreign Assets Control' },
     ];
 
     return categories.map(({ category, label, fullName }) => {
@@ -763,7 +796,7 @@ export class DashboardComponent {
     };
   });
 
-  // 2. Yearly Trend by Alert Reason: multi-line chart showing trends for PAL, PCL, and SDN over years
+  // 2. Yearly Trend by Alert Reason: multi-line chart showing trends for PAL, PCL, and OFAC over years
   protected readonly yearlyReasonTrendChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
 
@@ -799,7 +832,7 @@ export class DashboardComponent {
 
     const palCounts = new Array(yearCategories.length).fill(0);
     const pclCounts = new Array(yearCategories.length).fill(0);
-    const sdnCounts = new Array(yearCategories.length).fill(0);
+    const ofacCounts = new Array(yearCategories.length).fill(0);
 
     for (const r of recs) {
       if (r.decisionDate) {
@@ -813,15 +846,22 @@ export class DashboardComponent {
             palCounts[yIdx] += 1;
           } else if (recReason === 'PCL' || category === 'PCL' || recReason.startsWith('PCL')) {
             pclCounts[yIdx] += 1;
-          } else if (recReason === 'SDN' || category === 'SDN' || recReason.startsWith('SDN')) {
-            sdnCounts[yIdx] += 1;
+          } else if (
+            recReason === 'OFAC' ||
+            category === 'OFAC' ||
+            recReason.startsWith('OFAC') ||
+            recReason === 'SDN' ||
+            category === 'SDN' ||
+            recReason.startsWith('SDN')
+          ) {
+            ofacCounts[yIdx] += 1;
           } else {
             if (recReason.includes('PAL')) {
               palCounts[yIdx] += 1;
             } else if (recReason.includes('PCL')) {
               pclCounts[yIdx] += 1;
-            } else if (recReason.includes('SDN')) {
-              sdnCounts[yIdx] += 1;
+            } else if (recReason.includes('OFAC') || recReason.includes('SDN')) {
+              ofacCounts[yIdx] += 1;
             } else {
               palCounts[yIdx] += 1;
             }
@@ -843,7 +883,7 @@ export class DashboardComponent {
         },
       },
       subtitle: {
-        text: 'Annual screening trajectory across PAL, PCL, and SDN alert pipelines',
+        text: 'Annual screening trajectory across PAL, PCL, and OFAC alert pipelines',
         align: 'left',
         style: {
           fontFamily: "'Inter', sans-serif",
@@ -932,8 +972,8 @@ export class DashboardComponent {
         },
         {
           type: 'spline',
-          name: 'SDN Alerts',
-          data: sdnCounts,
+          name: 'OFAC Alerts',
+          data: ofacCounts,
           color: '#4A6F56',
           marker: {
             symbol: 'square',
@@ -1034,7 +1074,7 @@ export class DashboardComponent {
   // 3. Alert Reason by Country (100% Stacked Bar Chart)
   protected readonly alertReasonByCountryChartOptions = computed<Highcharts.Options>(() => {
     const recs = this.filteredRecords();
-    const countryMap = new Map<string, { pal: number; pcl: number; total: number }>();
+    const countryMap = new Map<string, { pal: number; pcl: number; ofac: number; total: number }>();
 
     for (const r of recs) {
       let country = (r.country || '').replace(/[\[\]]/g, '').trim();
@@ -1043,13 +1083,20 @@ export class DashboardComponent {
       }
       let entry = countryMap.get(country);
       if (!entry) {
-        entry = { pal: 0, pcl: 0, total: 0 };
+        entry = { pal: 0, pcl: 0, ofac: 0, total: 0 };
         countryMap.set(country, entry);
       }
       entry.total++;
       const reason = (r.reason || '').trim().toUpperCase();
       if (reason === 'PCL' || r.category === 'PCL') {
         entry.pcl++;
+      } else if (
+        reason === 'OFAC' ||
+        reason === 'SDN' ||
+        r.category === 'OFAC' ||
+        (r.category as string) === 'SDN'
+      ) {
+        entry.ofac++;
       } else {
         entry.pal++;
       }
@@ -1063,6 +1110,7 @@ export class DashboardComponent {
     const categories = sorted.length > 0 ? sorted.map((c) => c.name) : ['No Countries Recorded'];
     const palData = sorted.length > 0 ? sorted.map((c) => c.pal) : [0];
     const pclData = sorted.length > 0 ? sorted.map((c) => c.pcl) : [0];
+    const ofacData = sorted.length > 0 ? sorted.map((c) => c.ofac) : [0];
 
     return {
       chart: { type: 'bar', height: 340, backgroundColor: 'transparent' },
@@ -1122,6 +1170,12 @@ export class DashboardComponent {
           name: 'PCL Alerts',
           data: pclData,
           color: '#A86A1E',
+        },
+        {
+          type: 'bar',
+          name: 'OFAC Alerts',
+          data: ofacData,
+          color: '#4A6F56',
         },
       ],
     };
@@ -1218,7 +1272,10 @@ export class DashboardComponent {
     const recs = this.filteredRecords();
     const pal = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PAL' || r.category === 'PAL').length;
     const pcl = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'PCL' || r.category === 'PCL').length;
-    const sdn = recs.filter((r) => (r.reason || '').trim().toUpperCase() === 'SDN' || r.category === 'SDN').length;
+    const ofac = recs.filter((r) => {
+      const cat = (r.reason || '').trim().toUpperCase();
+      return cat === 'OFAC' || cat === 'SDN' || r.category === 'OFAC' || (r.category as string) === 'SDN';
+    }).length;
 
     return {
       chart: { type: 'pie', height: 280, backgroundColor: 'transparent' },
@@ -1272,7 +1329,7 @@ export class DashboardComponent {
           data: [
             { name: 'PAL', y: pal, color: '#3C476A' },
             { name: 'PCL', y: pcl, color: '#A86A1E' },
-            { name: 'SDN', y: sdn, color: '#4A6F56' },
+            { name: 'OFAC', y: ofac, color: '#4A6F56' },
           ],
         },
       ],
@@ -1724,6 +1781,7 @@ export class DashboardComponent {
         r.status === 'Red' &&
         (recordHasCategory(r, 'PAL') ||
           recordHasCategory(r, 'PCL') ||
+          recordHasCategory(r, 'OFAC') ||
           recordHasCategory(r, 'SDN'))
     );
 

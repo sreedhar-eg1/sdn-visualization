@@ -41,7 +41,7 @@ export class ReportsComponent {
 
   // Filter signals
   protected readonly selectedPlatform = signal<ScreeningSource | 'ALL'>('ALL');
-  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL' | 'SDN'>('ALL');
+  protected readonly selectedReason = signal<'ALL' | 'PAL' | 'PCL' | 'OFAC' | 'SDN'>('ALL');
   protected readonly selectedPreset = signal<DateRangePreset>('ALL_DATES');
   protected readonly startDate = signal<string>(this.initialRange.start);
   protected readonly endDate = signal<string>(this.initialRange.end);
@@ -65,12 +65,12 @@ export class ReportsComponent {
 
   protected readonly reasonOptions: ReadonlyArray<{
     label: string;
-    value: 'ALL' | 'PAL' | 'PCL' | 'SDN';
+    value: 'ALL' | 'PAL' | 'PCL' | 'OFAC' | 'SDN';
   }> = [
     { label: 'All alerts', value: 'ALL' },
     { label: 'PAL', value: 'PAL' },
     { label: 'PCL', value: 'PCL' },
-    { label: 'SDN', value: 'SDN' },
+    { label: 'OFAC', value: 'OFAC' },
   ];
 
   protected readonly datePresets: ReadonlyArray<{
@@ -212,7 +212,13 @@ export class ReportsComponent {
         if (reason === 'PCL' && recReason !== 'PCL' && record.category !== 'PCL') {
           return false;
         }
-        if (reason === 'SDN' && recReason !== 'SDN' && record.category !== 'SDN') {
+        if (
+          (reason === 'OFAC' || (reason as string) === 'SDN') &&
+          recReason !== 'OFAC' &&
+          recReason !== 'SDN' &&
+          record.category !== 'OFAC' &&
+          (record.category as string) !== 'SDN'
+        ) {
           return false;
         }
       }
@@ -257,7 +263,7 @@ export class ReportsComponent {
     this.selectedPlatform.set(platform);
   }
 
-  protected onReasonChange(reason: 'ALL' | 'PAL' | 'PCL' | 'SDN'): void {
+  protected onReasonChange(reason: 'ALL' | 'PAL' | 'PCL' | 'OFAC' | 'SDN'): void {
     this.selectedReason.set(reason);
   }
 

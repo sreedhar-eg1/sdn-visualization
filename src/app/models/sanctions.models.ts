@@ -1,6 +1,6 @@
 export type ScreeningSource = 'PAPERCEPT' | 'S1M' | 'IDAMS' | 'EMS' | 'IEEE XPLORE';
 
-export type ScreeningCategory = 'PAL' | 'PCL' | 'SDN';
+export type ScreeningCategory = 'PAL' | 'PCL' | 'OFAC' | 'SDN';
 
 export type ComplianceStatus = 'Red' | 'Green';
 

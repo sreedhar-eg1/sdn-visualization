@@ -114,9 +114,14 @@ const REASON_MAP: Record<ScreeningCategory, readonly string[]> = {
     'Embargoed City / Lab Geolocation (PCL)',
     'Export-Controlled Territory Origin (PCL)',
   ],
+  OFAC: [
+    'OFAC SDN Entity Alias Hit',
+    'Sanctioned Institution Funding Link (OFAC)',
+    'OFSI / DFAT Consolidated List Match',
+  ],
   SDN: [
     'OFAC SDN Entity Alias Hit',
-    'Sanctioned Institution Funding Link (SDN)',
+    'Sanctioned Institution Funding Link (OFAC)',
     'OFSI / DFAT Consolidated List Match',
   ],
 };
@@ -124,6 +129,7 @@ const REASON_MAP: Record<ScreeningCategory, readonly string[]> = {
 const WATCHLIST_MAP: Record<ScreeningCategory, readonly string[]> = {
   PAL: ['In-House PAL v4.2', 'Global Research Watchlist'],
   PCL: ['In-House PCL Registry', 'EAR / ITAR Country Matrix'],
+  OFAC: ['OFAC SDN List', 'UK OFSI Consolidated', 'Australia DFAT Sanctions'],
   SDN: ['OFAC SDN List', 'UK OFSI Consolidated', 'Australia DFAT Sanctions'],
 };
 
@@ -143,12 +149,12 @@ function buildInitialRecords(today: Date): SanctionsRecord[] {
     else if (sourceMod < 72) source = 'S1M';
     else source = 'IDAMS';
 
-    // Category distribution: ~42% PCL, ~36% PAL, ~22% SDN
+    // Category distribution: ~42% PCL, ~36% PAL, ~22% OFAC
     const catMod = (i * 11 + 5) % 100;
     let category: ScreeningCategory;
     if (catMod < 42) category = 'PCL';
     else if (catMod < 78) category = 'PAL';
-    else category = 'SDN';
+    else category = 'OFAC';
 
     // Country selection weighted toward Iran, China, India, Norway, etc.
     const countryRoll = (i * 13 + 7) % 100;
@@ -180,7 +186,7 @@ function buildInitialRecords(today: Date): SanctionsRecord[] {
     const statusThreshold = Math.round(countryEntry.redBias * 100);
     const statusRoll = (i * 17 + 19) % 100;
     const status: ComplianceStatus =
-      category === 'SDN'
+      category === 'OFAC' || (category as string) === 'SDN'
         ? statusRoll < Math.min(85, statusThreshold + 18)
           ? 'Red'
           : 'Green'

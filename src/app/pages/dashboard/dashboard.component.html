@@ -3,7 +3,7 @@
   <span class="mc-eyebrow">— Surveillance &bull; Executive Screening</span>
   <h1 class="mc-display">Sanctions Intelligence Dashboard</h1>
   <p class="mc-lead">
-    Continuous compliance surveillance tracking Prohibited Author List (PAL), Prohibited Country List (PCL), and Specially Designated Nationals (SDN) across editorial pipelines.
+    Continuous compliance surveillance tracking Prohibited Author List (PAL), Prohibited Country List (PCL), and Office of Foreign Assets Control (OFAC) across editorial pipelines.
   </p>
 </section>
 
@@ -261,24 +261,24 @@
           </div>
         </button>
 
-        <!-- 4. SDN Alerts -->
+        <!-- 4. OFAC Alerts -->
         <button
           type="button"
           (click)="
             openRedModal(
-              'SDN Alerts',
-              'Valid events where reason is SDN.',
-              'SDN',
-              'sdnEvents'
+              'OFAC Alerts',
+              'Valid events where reason is OFAC.',
+              'OFAC',
+              'ofacEvents'
             )
           "
           class="mc-card p-5 text-left cursor-pointer hover:border-oxblood transition-all"
         >
           <div class="text-xs uppercase tracking-wider font-semibold opacity-75" style="color: var(--mc-oxblood)">
-            SDN Alerts
+            OFAC Alerts
           </div>
           <div class="text-4xl font-serif font-bold mt-2" style="color: var(--mc-oxblood)">
-            {{ kpiStats().sdnAlerts }}
+            {{ kpiStats().ofacAlerts }}
           </div>
         </button>
 

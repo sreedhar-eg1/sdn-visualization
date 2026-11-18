@@ -214,7 +214,7 @@ describe('SanctionsDataService', () => {
     expect(dong?.city).toBe('Kuala Lumpur');
 
     const babushkin = service.records().find((r) => r.authorName === 'I. Babushkin');
-    expect(babushkin?.category).toBe('SDN');
+    expect(babushkin?.category).toBe('OFAC');
     expect(babushkin?.status).toBe('Red');
 
     // Merge sequentially with a CSV file
