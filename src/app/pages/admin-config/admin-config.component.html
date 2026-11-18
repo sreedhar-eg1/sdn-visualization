@@ -90,6 +90,134 @@
     </div>
   }
 
+  <!-- Screening Data & File Ingestion Section -->
+  <section class="mc-card space-y-4">
+    <div class="mc-card-head">
+      <div>
+        <span class="mc-eyebrow">— Data Ingestion</span>
+        <h3 class="mc-h3">Screening Export Files Ingestion (.xlsx / .csv)</h3>
+        <p class="mc-small">
+          Upload and ingest Excel (.xlsx / .xls) or CSV screening exports to populate live surveillance analytics, offender leaderboards, and compliance metrics on the Dashboard.
+        </p>
+      </div>
+      @if (dataService.uploadedExcelRecords().length > 0) {
+        <span class="mc-tag ok">
+          {{ dataService.uploadedExcelRecords().length }} Active Records across {{ dataService.uploadedFiles().length }} File(s)
+        </span>
+      } @else {
+        <span class="mc-tag neutral">No Screening Files Loaded</span>
+      }
+    </div>
+
+    <!-- Upload Controls Strip -->
+    <div
+      class="border-2 border-dashed rounded-2xl p-6 text-center transition-colors"
+      [style.border-color]="isDraggingFiles() ? 'var(--mc-oxblood)' : 'var(--mc-line)'"
+      [style.background]="isDraggingFiles() ? 'rgba(72,17,17,0.03)' : 'var(--mc-field)'"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDropFiles($event)"
+    >
+      <div class="flex flex-col items-center justify-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(72,17,17,0.06); color: var(--mc-oxblood)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" x2="12" y1="3" y2="15" />
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-sm" style="color: var(--mc-oxblood)">
+            Drag &amp; drop screening export files here, or browse
+          </div>
+          <p class="mc-small text-xs mt-1">
+            Accepts multiple Excel (.xlsx, .xls) and CSV (.csv, .txt) files. Batches are automatically parsed, validated, and merged.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-3 mt-1">
+          <!-- Primary Upload Button -->
+          <label class="mc-btn mc-btn-sm cursor-pointer shadow-sm hover:shadow transition-all">
+            <span>+ Upload Excel / CSV</span>
+            <span class="arr">&rarr;</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,.txt"
+              multiple
+              (change)="onCsvFileUpload($event)"
+              class="sr-only"
+            />
+          </label>
+
+          <!-- Pre-loaded Sample Datasets Dropdown -->
+          <select
+            class="mc-select text-xs py-2 px-3"
+            (change)="onDirectExcelSelect($event)"
+            aria-label="Directly load built-in screening dataset"
+          >
+            <option value="" disabled selected>Load Built-in Sample Datasets &hellip;</option>
+            @for (file of builtInExcelFiles; track file.name) {
+              <option [value]="file.name">{{ file.label }} ({{ file.recordCount }} recs)</option>
+            }
+          </select>
+
+          <!-- Quick 23-Row Sample Button -->
+          <button
+            type="button"
+            (click)="loadSampleExcel()"
+            class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer"
+            title="Load built-in 23-row demo sample"
+          >
+            <span>Load 23-Row Demo Sample</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uploaded Files Manager Chips & Status -->
+    @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
+      <div class="mc-tile flex flex-wrap items-center justify-between gap-3 mt-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="mc-eyebrow">Ingested Batches:</span>
+          @for (file of dataService.uploadedFiles(); track file.id) {
+            <span class="mc-tag neutral flex items-center gap-1.5 text-xs">
+              <span class="font-semibold">{{ file.fileName }}</span>
+              <span class="opacity-60">({{ file.recordCount }} rows)</span>
+              <button
+                type="button"
+                (click)="removeUploadedFile(file.id)"
+                class="hover:opacity-100 cursor-pointer text-xs ml-1"
+                [attr.aria-label]="'Remove ' + file.fileName"
+                title="Remove this batch"
+              >
+                &times;
+              </button>
+            </span>
+          }
+          @if (dataService.uploadedFiles().length > 1) {
+            <button
+              type="button"
+              (click)="clearUploadedFiles()"
+              class="mc-link mc-small ml-2 cursor-pointer text-xs"
+              style="color: var(--mc-bad)"
+            >
+              Clear All Files
+            </button>
+          }
+        </div>
+
+        @if (uploadStatusMessage(); as msg) {
+          <div class="flex items-center gap-2">
+            <span class="mc-tag ok text-xs">{{ msg }}</span>
+            <a routerLink="/dashboard" class="mc-btn mc-btn-sm text-xs py-1 px-3 text-white" style="color: #ffffff !important;">
+              <span>View in Dashboard &rarr;</span>
+            </a>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
   <!-- 1. Source Enablement Section -->
   <section class="mc-card space-y-4">
     <div class="mc-card-head">

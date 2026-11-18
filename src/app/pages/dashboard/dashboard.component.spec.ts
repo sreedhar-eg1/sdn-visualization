@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideHighcharts } from 'highcharts-angular';
 import * as XLSX from 'xlsx';
 import { DashboardComponent } from './dashboard.component';
@@ -9,6 +10,7 @@ describe('DashboardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
+        provideRouter([]),
         provideHighcharts({
           instance: () => import('highcharts/esm/highcharts.js').then((m) => m.default),
           modules: () => [import('highcharts/esm/modules/accessibility.js')],
@@ -30,9 +32,11 @@ describe('DashboardComponent', () => {
     expect(text).not.toContain('Screening Overview');
     expect(text).not.toContain('Repeat Offender Leaderboard');
 
-    // Verify clean upload prompt is displayed
-    expect(text).toContain('No Screening Data Loaded');
-    expect(text).toContain('+ Upload Excel / CSV');
+    // Verify clean empty state prompt is displayed without admin/upload indications
+    expect(text).toContain('No Screening Data Available');
+    expect(text).not.toContain('Upload Files in Admin Configuration');
+    expect(text).not.toContain('Manage Ingestion & Uploads in Admin');
+    expect(text).toContain('Surveillance Screening Filters');
 
     // When sample dataset is loaded, all metrics and tables render
     fixture.componentInstance['loadSampleExcel']();

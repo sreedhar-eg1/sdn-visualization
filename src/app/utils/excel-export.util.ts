@@ -18,7 +18,7 @@ export async function exportRecordsToExcel(
   // Derive target file name: <UploadedExcelBaseName>_<Category>.xlsx
   const rawBase = options.uploadedFileName
     ? options.uploadedFileName.replace(/\.[^.]+$/, '')
-    : (records[0]?.sourceFileName ? records[0].sourceFileName.replace(/\.[^.]+$/, '') : 'Sanctions_Lens');
+    : (records[0]?.sourceFileName ? records[0].sourceFileName.replace(/\.[^.]+$/, '') : 'SanctionsLens');
   const cleanCategory = options.categoryOrReport.replace(/\s+/g, '');
   const fileName = `${rawBase}_${cleanCategory}.xlsx`;
 

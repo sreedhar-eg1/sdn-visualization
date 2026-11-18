@@ -1,7 +1,7 @@
 <!-- Dashboard Page Head -->
 <section class="mc-page-head">
   <span class="mc-eyebrow">— Surveillance &bull; Executive Screening</span>
-  <h1 class="mc-display">Sanctions Lens Dashboard</h1>
+  <h1 class="mc-display">SanctionsLens Dashboard</h1>
   <p class="mc-lead">
     Continuous compliance surveillance tracking Prohibited Author List (PAL), Prohibited Country List (PCL), and Office of Foreign Assets Control (OFAC) across editorial pipelines.
   </p>
@@ -10,104 +10,17 @@
 <div class="space-y-6">
   <!-- Filters Control Card -->
   <section aria-label="Dashboard Filters" class="mc-card">
-    <!-- Dataset Mode & Multi-File Upload Strip -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4" style="border-bottom: 1px solid var(--mc-line)">
+    <!-- Surveillance Screening Filters Header Strip -->
+    <div class="flex items-center justify-between gap-3 pb-4" style="border-bottom: 1px solid var(--mc-line)">
       <div class="flex items-center gap-3 flex-wrap">
-        <span class="mc-eyebrow">Santioned Report:</span>
-        <!-- <div class="mc-chips" role="group" aria-label="Dataset Mode">
-          <button
-            type="button"
-            (click)="setDatasetMode('UPLOADED_ONLY')"
-            class="mc-chip"
-            [class.is-on]="dataService.datasetMode() === 'UPLOADED_ONLY'"
-            [attr.aria-pressed]="dataService.datasetMode() === 'UPLOADED_ONLY'"
-          >
-            Uploaded Files Only ({{ dataService.uploadedExcelRecords().length }})
-          </button>
-          <button
-            type="button"
-            (click)="setDatasetMode('COMBINED')"
-            class="mc-chip"
-            [class.is-on]="dataService.datasetMode() === 'COMBINED'"
-            [attr.aria-pressed]="dataService.datasetMode() === 'COMBINED'"
-          >
-            Combined (+ Mock JSON: {{
-              dataService.mockRecords().length + dataService.uploadedExcelRecords().length
-            }})
-          </button>
-          <button
-            type="button"
-            (click)="setDatasetMode('MOCK_ONLY')"
-            class="mc-chip"
-            [class.is-on]="dataService.datasetMode() === 'MOCK_ONLY'"
-            [attr.aria-pressed]="dataService.datasetMode() === 'MOCK_ONLY'"
-          >
-            Mock JSON (On Hold: {{ dataService.mockRecords().length }})
-          </button>
-        </div> -->
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- <select
-          class="mc-select text-xs py-1"
-          (change)="onDirectExcelSelect($event)"
-          aria-label="Directly load uploaded Excel"
-        >
-          <option value="" disabled selected>Direct Load Excel &hellip;</option>
-          @for (file of builtInExcelFiles; track file.name) {
-            <option [value]="file.name">{{ file.label }} ({{ file.recordCount }} recs)</option>
-          }
-        </select> -->
-
-        <label class="mc-btn mc-btn-sm cursor-pointer">
-          <span>+ Upload Excel / CSV</span>
-          <span class="arr">&rarr;</span>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv,.txt"
-            multiple
-            (change)="onCsvFileUpload($event)"
-            class="sr-only"
-          />
-        </label>
-      </div>
-    </div>
-
-    <!-- Uploaded Files Chips + Merge Status -->
-    <!-- @if (dataService.uploadedFiles().length > 0 || uploadStatusMessage()) {
-      <div class="mc-tile mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="mc-eyebrow">Santioned Report</span>
-          @for (file of dataService.uploadedFiles(); track file.id) {
-            <span class="mc-tag neutral flex items-center gap-1.5">
-              <span class="font-semibold">{{ file.fileName }}</span>
-              <span class="opacity-60">({{ file.recordCount }})</span>
-              <button
-                type="button"
-                (click)="removeUploadedFile(file.id)"
-                class="hover:opacity-100 cursor-pointer text-xs"
-                [attr.aria-label]="'Remove ' + file.fileName"
-              >
-                &times;
-              </button>
-            </span>
-          }
-          @if (dataService.uploadedFiles().length > 1) {
-            <button
-              type="button"
-              (click)="clearUploadedFiles()"
-              class="mc-link mc-small ml-2 cursor-pointer"
-            >
-              Clear All
-            </button>
-          }
-        </div>
-
-        @if (uploadStatusMessage(); as msg) {
-          <span class="mc-tag ok">{{ msg }}</span>
+        <span class="mc-eyebrow" style="font-weight: 600; color: var(--mc-oxblood)">Surveillance Screening Filters</span>
+        @if (dataService.uploadedExcelRecords().length > 0) {
+          <span class="mc-tag ok text-[11px] py-0.5 px-2.5">
+            {{ dataService.uploadedExcelRecords().length }} Active Ingested Records
+          </span>
         }
       </div>
-    } -->
+    </div>
 
     <!-- Filter Inputs Grid (All 6 controls fit on a single balanced 12-column row on desktop) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end mt-4">
@@ -589,35 +502,22 @@
       </div>
     </section>
   } @else {
-    <!-- Clean Prompt when No Screening Records are Uploaded -->
-    <section aria-label="No Data Uploaded Prompt" class="mc-card text-center py-14 px-6 my-4 flex flex-col items-center justify-center">
+    <!-- Clean Prompt when No Screening Records are Available -->
+    <section aria-label="No Data Available Prompt" class="mc-card text-center py-14 px-6 my-4 flex flex-col items-center justify-center">
       <div class="w-12 h-12 rounded-full flex items-center justify-center mb-3" style="background: rgba(72,17,17,0.06); color: var(--mc-oxblood)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" x2="12" y1="3" y2="15" />
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
       <span class="mc-eyebrow mb-1">— Surveillance Screening</span>
-      <h3 class="mc-h3 font-serif font-bold text-lg !mb-6" style="color: var(--mc-oxblood-dark)">
-        No Screening Data Loaded
+      <h3 class="mc-h3 font-serif font-bold text-lg mb-1" style="color: var(--mc-oxblood-dark)">
+        No Screening Data Available
       </h3>
-      <!-- <p class="mc-body text-sm max-w-md opacity-75 mb-6">
-        The dashboard is waiting for screening export files. Upload an Excel (.xlsx / .xls) or CSV export to view continuous compliance analytics, risk trends, and author watchlists.
-      </p> -->
-      <div class="flex flex-wrap items-center justify-center gap-3">
-        <label class="mc-btn mc-btn-sm cursor-pointer">
-          <span>+ Upload Excel / CSV</span>
-          <span class="arr">&rarr;</span>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv,.txt"
-            multiple
-            (change)="onCsvFileUpload($event)"
-            class="sr-only"
-          />
-        </label>
-      </div>
+      <p class="mc-body text-sm max-w-md opacity-75">
+        There are currently no active screening records matching the surveillance pipeline.
+      </p>
     </section>
   }
 </div>

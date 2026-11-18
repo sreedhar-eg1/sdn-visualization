@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { SanctionsDataService } from '../../services/sanctions-data.service';
+import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
 import { WatchlistSourceConfig } from '../../models/sanctions.models';
 
 @Component({
@@ -53,6 +53,11 @@ export class AdminConfigComponent {
   protected readonly palNotes = signal('');
   protected readonly palSearch = signal('');
   protected readonly uploadedFileName = signal<string | null>(null);
+
+  // Screening Export File Ingestion signals
+  protected readonly uploadStatusMessage = signal<string | null>(null);
+  protected readonly isDraggingFiles = signal<boolean>(false);
+  protected readonly builtInExcelFiles = BUILT_IN_EXCEL_FILES;
 
   protected readonly filteredPalEntries = computed(() => {
     const q = this.palSearch().trim().toLowerCase();
@@ -198,6 +203,113 @@ export class AdminConfigComponent {
     this.dataService.addBulkPalEntries(sampleBatch);
     this.uploadedFileName.set('pal-weekly-batch-demo.csv');
     this.showToast('Data got ingested: 2 PAL author records from weekly batch file ingested into registry.');
+  }
+
+  // Screening Export File Ingestion methods
+  protected onCsvFileUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    void this.processUploadedFiles(Array.from(input.files)).then(() => {
+      input.value = '';
+    });
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(false);
+  }
+
+  protected onDropFiles(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFiles.set(false);
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      void this.processUploadedFiles(Array.from(files));
+    }
+  }
+
+  protected async processUploadedFiles(files: File[]): Promise<void> {
+    let totalAdded = 0;
+    let totalSkipped = 0;
+    let processedCount = 0;
+
+    for (const file of files) {
+      const isExcelWorkbook = /\.(xlsx|xls)$/i.test(file.name);
+      const result = isExcelWorkbook
+        ? await this.dataService.importUploadedExcel(await file.arrayBuffer(), file.name)
+        : this.dataService.importUploadedCsv(await file.text(), file.name);
+      if (result.parsed > 0) {
+        processedCount += 1;
+        totalAdded += result.added;
+        totalSkipped += result.skippedDuplicates;
+      }
+    }
+
+    if (processedCount === 0) {
+      this.uploadStatusMessage.set(
+        'No valid screening rows found in the selected file(s). Please upload a valid Excel (.xlsx/.xls) or CSV screening export.'
+      );
+      return;
+    }
+
+    this.dataService.datasetMode.set('UPLOADED_ONLY');
+    const totalRecords = this.dataService.uploadedExcelRecords().length;
+    const totalFiles = this.dataService.uploadedFiles().length;
+    const dupNote = totalSkipped > 0 ? ` (${totalSkipped} duplicate row(s) skipped)` : '';
+    const message = `Data got ingested: Merged +${totalAdded} record(s) from ${processedCount} file(s)${dupNote}. Total: ${totalRecords} active screening records across ${totalFiles} file(s).`;
+    this.uploadStatusMessage.set(message);
+    this.showToast(message);
+  }
+
+  protected loadSampleExcel(): void {
+    const result = this.dataService.loadBuiltInSampleCsv();
+    this.dataService.datasetMode.set('UPLOADED_ONLY');
+    const message = `Data got ingested: Loaded ${result.added} sample records (idams-sample-23-rows.csv). Active total: ${this.dataService.uploadedExcelRecords().length} records.`;
+    this.uploadStatusMessage.set(message);
+    this.showToast(message);
+  }
+
+  protected async loadDirectExcel(fileName: string): Promise<void> {
+    try {
+      const result = await this.dataService.loadBuiltInExcel(fileName);
+      this.dataService.datasetMode.set('UPLOADED_ONLY');
+      const message = `Data got ingested: Loaded ${result.added} records directly from ${fileName}. Active total: ${this.dataService.uploadedExcelRecords().length} records.`;
+      this.uploadStatusMessage.set(message);
+      this.showToast(message);
+    } catch (err) {
+      this.uploadStatusMessage.set(
+        `Could not load ${fileName}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  protected onDirectExcelSelect(event: Event): void {
+    const select = event.target as HTMLSelectElement | null;
+    if (!select || !select.value) return;
+    const fileName = select.value;
+    select.value = '';
+    void this.loadDirectExcel(fileName);
+  }
+
+  protected removeUploadedFile(batchId: string): void {
+    this.dataService.removeUploadedFile(batchId);
+    const remaining = this.dataService.uploadedExcelRecords().length;
+    const msg = remaining > 0
+      ? `File removed. ${remaining} merged record(s) remaining in active screening dataset.`
+      : null;
+    this.uploadStatusMessage.set(msg);
+    if (msg) this.showToast(msg);
+  }
+
+  protected clearUploadedFiles(): void {
+    this.dataService.clearUploadedFiles();
+    this.uploadStatusMessage.set(null);
+    this.showToast('All uploaded screening records have been cleared.');
   }
 
   private parsePalFileContent(

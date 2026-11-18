@@ -108,4 +108,22 @@ describe('AdminConfigComponent', () => {
     expect(viewDashboardBtn?.textContent).toContain('View Dashboard');
     expect((viewDashboardBtn as HTMLElement)?.style.color).toBe('rgb(255, 255, 255)');
   });
+
+  it('should render Screening Export Files Ingestion section with + Upload Excel / CSV and support loading sample records', async () => {
+    const fixture = TestBed.createComponent(AdminConfigComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Screening Export Files Ingestion');
+    expect(el.textContent).toContain('+ Upload Excel / CSV');
+
+    // Trigger sample Excel load
+    fixture.componentInstance['loadSampleExcel']();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Data got ingested');
+    expect(fixture.nativeElement.textContent).toContain('idams-sample-23-rows.csv');
+  });
 });

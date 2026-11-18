@@ -14,7 +14,7 @@ import { AuthService } from '../../services/auth.service';
       <div class="mc-brand">
         <a routerLink="/dashboard" class="flex items-baseline gap-3 text-inherit no-underline">
           <span class="mc-wordmark">MolecularConnections</span>
-          <span class="mc-eyebrow">Sanctions Lens</span>
+          <span class="mc-eyebrow">SanctionsLens</span>
         </a>
       </div>
 
@@ -56,7 +56,7 @@ import { AuthService } from '../../services/auth.service';
             type="button"
             (click)="logout()"
             class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer"
-            title="Sign out of Sanctions Lens"
+            title="Sign out of SanctionsLens"
           >
             <span>Logout</span>
             <span class="arr">&rarr;</span>

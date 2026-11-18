@@ -29,7 +29,7 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.mc-wordmark')?.textContent).toContain('MolecularConnections');
-    expect(compiled.querySelector('.mc-eyebrow')?.textContent).toContain('Sanctions Lens');
+    expect(compiled.querySelector('.mc-eyebrow')?.textContent).toContain('SanctionsLens');
   });
 
   it('should render the Logout button in header when authenticated and call logout on click', async () => {
