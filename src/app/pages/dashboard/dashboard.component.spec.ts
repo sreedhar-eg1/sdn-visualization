@@ -480,10 +480,11 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
     expect(comp['filteredRecords']().length).toBeGreaterThan(0);
 
-    // Verify reset restores ALL_DATES
+    // Verify reset restores ALL_DATES and default from date 2024-03-01
     comp['resetFilters']();
     fixture.detectChanges();
     expect(comp['selectedPreset']()).toBe('ALL_DATES');
+    expect(comp['startDate']()).toBe('2024-03-01');
     expect(comp['filteredRecords']().length).toBe(allCount);
   }, 15000);
 });

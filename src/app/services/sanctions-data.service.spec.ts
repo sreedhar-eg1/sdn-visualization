@@ -316,4 +316,18 @@ describe('SanctionsDataService', () => {
     expect(lee?.city).toBe('Caracas');
     expect(lee?.decisionDate).toBe('2026-05-12');
   });
+
+  it('should default the from date to 1st March 2024 (2024-03-01) for ALL_DATES and CUSTOM presets', () => {
+    // Initial empty state
+    const rangeEmpty = service.getDateRangeForPreset('ALL_DATES');
+    expect(rangeEmpty.start).toBe('2024-03-01');
+
+    // After uploading sample data
+    service.loadBuiltInSampleCsv();
+    const rangeLoaded = service.getDateRangeForPreset('ALL_DATES');
+    expect(rangeLoaded.start).toBe('2024-03-01');
+
+    const rangeCustom = service.getDateRangeForPreset('CUSTOM');
+    expect(rangeCustom.start).toBe('2024-03-01');
+  });
 });

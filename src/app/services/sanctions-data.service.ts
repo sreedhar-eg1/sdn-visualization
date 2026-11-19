@@ -238,6 +238,8 @@ export interface AvailableExcelFile {
   recordCount: number;
 }
 
+export const DEFAULT_FROM_DATE = '2024-03-01';
+
 export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
   {
     name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2024_31Dec2024.xlsx',
@@ -516,9 +518,8 @@ export class SanctionsDataService {
           .map((r) => r.decisionDate)
           .filter(Boolean)
           .sort();
-        const earliest = allDates[0] && allDates[0] < '2025-01-01' ? allDates[0] : '2025-01-01';
         return {
-          start: allDates[0] ?? earliest,
+          start: DEFAULT_FROM_DATE,
           end: allDates[allDates.length - 1] ?? end,
         };
       }
@@ -532,7 +533,7 @@ export class SanctionsDataService {
         return { start: `${this.today.getFullYear()}-01-01`, end };
       case 'CUSTOM':
       default:
-        return { start: formatIsoDate(addDays(this.today, -90)), end };
+        return { start: DEFAULT_FROM_DATE, end };
     }
   }
 
