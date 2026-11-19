@@ -245,6 +245,12 @@ export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
     description: 'Full year 2025 multi-source screened author & document report',
     recordCount: 465,
   },
+  {
+    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2026_17Nov2026.xlsx',
+    label: 'Sanctioned Report (2026 S1M, IDAMS, PAPERCEPT)',
+    description: 'Year-to-date 2026 multi-source screened author & document report (01 Jan 2026 - 17 Nov 2026)',
+    recordCount: 865,
+  },
 ];
 
 @Injectable({
