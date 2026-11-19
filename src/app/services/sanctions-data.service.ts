@@ -240,6 +240,12 @@ export interface AvailableExcelFile {
 
 export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
   {
+    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2024_31Dec2024.xlsx',
+    label: 'Sanctioned Report (2024 S1M, IDAMS, PAPERCEPT)',
+    description: 'Year 2024 multi-source screened author & document report (01 Mar 2024 - 31 Dec 2024)',
+    recordCount: 580,
+  },
+  {
     name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx',
     label: 'Sanctioned Report (2025 S1M, IDAMS, PAPERCEPT)',
     description: 'Full year 2025 multi-source screened author & document report',

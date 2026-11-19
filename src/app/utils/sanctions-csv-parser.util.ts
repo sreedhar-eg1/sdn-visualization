@@ -63,8 +63,32 @@ export function parseCsvRows(csvText: string): string[][] {
   return rows.filter((row) => row.some((cell) => cell.trim().length > 0));
 }
 
+function decodeHtmlEntities(str: string): string {
+  if (!str || !str.includes('&')) return str;
+  return str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      try {
+        return String.fromCodePoint(parseInt(hex, 16));
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try {
+        return String.fromCodePoint(parseInt(dec, 10));
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 function cleanText(raw: string | undefined | null): string {
-  return String(raw ?? '')
+  return decodeHtmlEntities(String(raw ?? ''))
     .replace(/\u00a0/g, ' ')
     .trim();
 }
