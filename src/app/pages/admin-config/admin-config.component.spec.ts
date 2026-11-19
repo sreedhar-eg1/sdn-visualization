@@ -126,4 +126,17 @@ describe('AdminConfigComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Data got ingested');
     expect(fixture.nativeElement.textContent).toContain('idams-sample-23-rows.csv');
   });
+
+  it('should only show SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx in the sample dataset dropdown', async () => {
+    const fixture = TestBed.createComponent(AdminConfigComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const select = fixture.nativeElement.querySelector('select[aria-label="Directly load built-in screening dataset"]') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    const options = Array.from(select.querySelectorAll('option')).filter((opt) => !opt.disabled);
+    expect(options.length).toBe(1);
+    expect(options[0].value).toBe('SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx');
+    expect(options[0].textContent).toContain('Sanctioned Report (2025 S1M, IDAMS, PAPERCEPT)');
+  });
 });

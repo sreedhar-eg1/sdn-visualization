@@ -245,30 +245,6 @@ export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
     description: 'Full year 2025 multi-source screened author & document report',
     recordCount: 465,
   },
-  {
-    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_12May2026.xlsx',
-    label: 'Sanctioned Report (S1M + IDAMS)',
-    description: 'Multi-source screened author & document report with co-authors',
-    recordCount: 27,
-  },
-  {
-    name: 'MQ601_1791978056557.xlsx',
-    label: 'MQ601 Sanctions Export',
-    description: '44 screened author & document records with match scores',
-    recordCount: 44,
-  },
-  {
-    name: 'PCL_Report_12May2026.xlsx',
-    label: 'PCL Country Report',
-    description: 'Prohibited Country List screened records (Venezuela & Crimea)',
-    recordCount: 9,
-  },
-  {
-    name: 'SanctionedReport_IDAMS_12May2026.xlsx',
-    label: 'IDAMS Sanctioned Report',
-    description: 'IDAMS feed records with author affiliations',
-    recordCount: 8,
-  },
 ];
 
 @Injectable({

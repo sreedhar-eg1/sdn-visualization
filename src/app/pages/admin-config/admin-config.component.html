@@ -149,13 +149,13 @@
             />
           </label>
 
-          <!-- Pre-loaded Sample Datasets Dropdown -->
+          <!-- Pre-loaded Sample Dataset Dropdown -->
           <select
             class="mc-select text-xs py-2 px-3"
             (change)="onDirectExcelSelect($event)"
             aria-label="Directly load built-in screening dataset"
           >
-            <option value="" disabled selected>Load Built-in Sample Datasets &hellip;</option>
+            <option value="" disabled selected>Load Built-in Sample Dataset &hellip;</option>
             @for (file of builtInExcelFiles; track file.name) {
               <option [value]="file.name">{{ file.label }} ({{ file.recordCount }} recs)</option>
             }
