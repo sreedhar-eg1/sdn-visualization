@@ -117,6 +117,8 @@
             type="date"
             [ngModel]="startDate()"
             (ngModelChange)="onCustomStartDate($event)"
+            (change)="onCustomStartDate($event)"
+            (input)="onCustomStartDate($event)"
             class="mc-input"
           />
         </div>
@@ -127,6 +129,8 @@
             type="date"
             [ngModel]="endDate()"
             (ngModelChange)="onCustomEndDate($event)"
+            (change)="onCustomEndDate($event)"
+            (input)="onCustomEndDate($event)"
             class="mc-input"
           />
         </div>

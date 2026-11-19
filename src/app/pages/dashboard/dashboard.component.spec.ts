@@ -434,4 +434,56 @@ describe('DashboardComponent', () => {
     expect(pclTotal).toBe(kpi.pclAlerts);
     expect(ofacTotal).toBe(kpi.ofacAlerts);
   });
+
+  it('should reactively filter records and update metrics when custom start and end dates are chosen', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const comp = fixture.componentInstance;
+    comp['dataService'].loadBuiltInSampleCsv();
+    fixture.detectChanges();
+
+    const allCount = comp['filteredRecords']().length;
+    expect(allCount).toBeGreaterThan(0);
+    expect(comp['selectedPreset']()).toBe('ALL_DATES');
+
+    // Choose custom start and end date that restricts to April 2026
+    comp['onCustomStartDate']('2026-04-01');
+    comp['onCustomEndDate']('2026-04-30');
+    fixture.detectChanges();
+
+    expect(comp['selectedPreset']()).toBe('CUSTOM');
+    expect(comp['startDate']()).toBe('2026-04-01');
+    expect(comp['endDate']()).toBe('2026-04-30');
+
+    const filteredApril = comp['filteredRecords']();
+    expect(filteredApril.length).toBeGreaterThan(0);
+    expect(filteredApril.every((r) => r.decisionDate.slice(0, 10) >= '2026-04-01' && r.decisionDate.slice(0, 10) <= '2026-04-30')).toBe(true);
+
+    // Choose a date range with no records (e.g. year 2020)
+    comp['onCustomStartDate']('2020-01-01');
+    comp['onCustomEndDate']('2020-01-31');
+    fixture.detectChanges();
+    expect(comp['filteredRecords']().length).toBe(0);
+    expect(comp['kpiStats']().totalFlaggedEvents).toBe(0);
+
+    // Verify DOM Event support (simulating browser native datepicker change event)
+    const mockInputEvent = { target: { value: '2026-04-17' } } as unknown as Event;
+    comp['onCustomStartDate'](mockInputEvent);
+    comp['onCustomEndDate'](mockInputEvent);
+    fixture.detectChanges();
+    expect(comp['startDate']()).toBe('2026-04-17');
+    expect(comp['endDate']()).toBe('2026-04-17');
+    expect(comp['filteredRecords']().every((r) => r.decisionDate.slice(0, 10) === '2026-04-17')).toBe(true);
+
+    // Verify swapped dates handling (start > end)
+    comp['onCustomStartDate']('2026-12-31');
+    comp['onCustomEndDate']('2026-01-01');
+    fixture.detectChanges();
+    expect(comp['filteredRecords']().length).toBeGreaterThan(0);
+
+    // Verify reset restores ALL_DATES
+    comp['resetFilters']();
+    fixture.detectChanges();
+    expect(comp['selectedPreset']()).toBe('ALL_DATES');
+    expect(comp['filteredRecords']().length).toBe(allCount);
+  }, 15000);
 });

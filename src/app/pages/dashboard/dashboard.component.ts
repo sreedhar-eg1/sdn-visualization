@@ -171,11 +171,21 @@ export class DashboardComponent {
         }
       }
       // Date range filter
-      if (preset !== 'ALL_DATES' && record.decisionDate) {
-        if (start && record.decisionDate < start) {
+      if (preset !== 'ALL_DATES') {
+        const recDate = (record.decisionDate || '').slice(0, 10);
+        if (!recDate) {
           return false;
         }
-        if (end && record.decisionDate > end) {
+        let effectiveStart = start;
+        let effectiveEnd = end;
+        if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+          effectiveStart = end;
+          effectiveEnd = start;
+        }
+        if (effectiveStart && recDate < effectiveStart) {
+          return false;
+        }
+        if (effectiveEnd && recDate > effectiveEnd) {
           return false;
         }
       }
@@ -2036,12 +2046,26 @@ export class DashboardComponent {
     }
   }
 
-  protected onCustomStartDate(date: string): void {
+  protected onCustomStartDate(eventOrValue: string | Event): void {
+    let date = '';
+    if (typeof eventOrValue === 'string') {
+      date = eventOrValue;
+    } else if (eventOrValue && (eventOrValue.target as HTMLInputElement)?.value !== undefined) {
+      date = (eventOrValue.target as HTMLInputElement).value;
+    }
+    date = (date || '').trim();
     this.startDate.set(date);
     this.selectedPreset.set('CUSTOM');
   }
 
-  protected onCustomEndDate(date: string): void {
+  protected onCustomEndDate(eventOrValue: string | Event): void {
+    let date = '';
+    if (typeof eventOrValue === 'string') {
+      date = eventOrValue;
+    } else if (eventOrValue && (eventOrValue.target as HTMLInputElement)?.value !== undefined) {
+      date = (eventOrValue.target as HTMLInputElement).value;
+    }
+    date = (date || '').trim();
     this.endDate.set(date);
     this.selectedPreset.set('CUSTOM');
   }

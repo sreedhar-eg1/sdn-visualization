@@ -223,11 +223,21 @@ export class ReportsComponent {
         }
       }
       // Date range filter
-      if (preset !== 'ALL_DATES' && record.decisionDate) {
-        if (start && record.decisionDate < start) {
+      if (preset !== 'ALL_DATES') {
+        const recDate = (record.decisionDate || '').slice(0, 10);
+        if (!recDate) {
           return false;
         }
-        if (end && record.decisionDate > end) {
+        let effectiveStart = start;
+        let effectiveEnd = end;
+        if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+          effectiveStart = end;
+          effectiveEnd = start;
+        }
+        if (effectiveStart && recDate < effectiveStart) {
+          return false;
+        }
+        if (effectiveEnd && recDate > effectiveEnd) {
           return false;
         }
       }
@@ -269,17 +279,33 @@ export class ReportsComponent {
 
   protected onPresetChange(preset: DateRangePreset): void {
     this.selectedPreset.set(preset);
-    const range = this.dataService.getDateRangeForPreset(preset);
-    this.startDate.set(range.start);
-    this.endDate.set(range.end);
+    if (preset !== 'CUSTOM') {
+      const range = this.dataService.getDateRangeForPreset(preset);
+      this.startDate.set(range.start);
+      this.endDate.set(range.end);
+    }
   }
 
-  protected onCustomStartDate(date: string): void {
+  protected onCustomStartDate(eventOrValue: string | Event): void {
+    let date = '';
+    if (typeof eventOrValue === 'string') {
+      date = eventOrValue;
+    } else if (eventOrValue && (eventOrValue.target as HTMLInputElement)?.value !== undefined) {
+      date = (eventOrValue.target as HTMLInputElement).value;
+    }
+    date = (date || '').trim();
     this.selectedPreset.set('CUSTOM');
     this.startDate.set(date);
   }
 
-  protected onCustomEndDate(date: string): void {
+  protected onCustomEndDate(eventOrValue: string | Event): void {
+    let date = '';
+    if (typeof eventOrValue === 'string') {
+      date = eventOrValue;
+    } else if (eventOrValue && (eventOrValue.target as HTMLInputElement)?.value !== undefined) {
+      date = (eventOrValue.target as HTMLInputElement).value;
+    }
+    date = (date || '').trim();
     this.selectedPreset.set('CUSTOM');
     this.endDate.set(date);
   }

@@ -519,9 +519,7 @@ export class SanctionsDataService {
         const earliest = allDates[0] && allDates[0] < '2025-01-01' ? allDates[0] : '2025-01-01';
         return {
           start: allDates[0] ?? earliest,
-          end: allDates[allDates.length - 1] && allDates[allDates.length - 1] > end
-            ? allDates[allDates.length - 1]
-            : end,
+          end: allDates[allDates.length - 1] ?? end,
         };
       }
       case 'LAST_7_DAYS':
