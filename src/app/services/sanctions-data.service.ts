@@ -1,5 +1,4 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { UPLOADED_SANCTIONS_CSV } from '../data/uploaded-sanctions-csv';
 import {
   ComplianceStatus,
   DatasetMode,
@@ -231,35 +230,9 @@ function buildInitialRecords(today: Date): SanctionsRecord[] {
   return records;
 }
 
-export interface AvailableExcelFile {
-  name: string;
-  label: string;
-  description: string;
-  recordCount: number;
-}
-
 export const DEFAULT_FROM_DATE = '2024-03-01';
 
-export const BUILT_IN_EXCEL_FILES: AvailableExcelFile[] = [
-  {
-    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2024_31Dec2024.xlsx',
-    label: 'Sanctioned Report (2024 S1M, IDAMS, PAPERCEPT)',
-    description: 'Year 2024 multi-source screened author & document report (01 Mar 2024 - 31 Dec 2024)',
-    recordCount: 580,
-  },
-  {
-    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2025_31Dec2025.xlsx',
-    label: 'Sanctioned Report (2025 S1M, IDAMS, PAPERCEPT)',
-    description: 'Full year 2025 multi-source screened author & document report',
-    recordCount: 465,
-  },
-  {
-    name: 'SanctionedReport_S1M_IDAMS_PAPERCEPT_01Jan2026_17Nov2026.xlsx',
-    label: 'Sanctioned Report (2026 S1M, IDAMS, PAPERCEPT)',
-    description: 'Year-to-date 2026 multi-source screened author & document report (01 Jan 2026 - 17 Nov 2026)',
-    recordCount: 865,
-  },
-];
+export const BUILT_IN_DATASET_FILE = 'Combined-1March2024-17Nov2026.xlsx';
 
 @Injectable({
   providedIn: 'root',
@@ -268,22 +241,30 @@ export class SanctionsDataService {
   private readonly today = new Date();
   private batchCounter = 0;
 
+  constructor() {
+    void this.loadDefaultDataset().catch(() => undefined);
+  }
+
   /** Synthetic mock JSON dataset preserved on hold (not shown until explicitly enabled) */
   readonly mockRecords = signal<SanctionsRecord[]>(buildInitialRecords(this.today));
 
   /** Parsed records from uploaded Excel/CSV files (starts empty until user uploads) */
   readonly uploadedExcelRecords = signal<SanctionsRecord[]>([]);
 
+  /** Combined built-in dataset used until a user uploads their own file */
+  readonly defaultRecords = signal<SanctionsRecord[]>([]);
+
   /** Tracks each uploaded CSV/Excel file batch merged into the dashboard */
   readonly uploadedFiles = signal<UploadedFileBatch[]>([]);
 
-  /** Default to UPLOADED_ONLY so data appears only when files are uploaded */
+  /** User uploads replace the default dataset in the dashboard view */
   readonly datasetMode = signal<DatasetMode>('UPLOADED_ONLY');
 
   readonly records = computed<SanctionsRecord[]>(() => {
     const mode = this.datasetMode();
     if (mode === 'UPLOADED_ONLY') {
-      return this.uploadedExcelRecords();
+      const uploaded = this.uploadedExcelRecords();
+      return uploaded.length > 0 ? uploaded : this.defaultRecords();
     }
     if (mode === 'MOCK_ONLY') {
       return this.mockRecords();
@@ -630,22 +611,17 @@ export class SanctionsDataService {
     this.uploadedExcelRecords.set([]);
   }
 
-  loadBuiltInSampleCsv(): { parsed: number; added: number; skippedDuplicates: number } {
-    return this.importUploadedCsv(UPLOADED_SANCTIONS_CSV, 'idams-sample-23-rows.csv');
-  }
-
   /**
-   * Loads an uploaded Excel workbook directly from the application's /data/ assets.
+   * Loads the built-in workbook into its own dataset, separate from user uploads.
    */
-  async loadBuiltInExcel(
-    fileName: string
-  ): Promise<{ parsed: number; added: number; skippedDuplicates: number }> {
-    const response = await fetch(`data/${fileName}`);
+  private async loadDefaultDataset(): Promise<void> {
+    const response = await fetch(`data/${BUILT_IN_DATASET_FILE}`);
     if (!response.ok) {
-      throw new Error(`Failed to load ${fileName}: ${response.statusText}`);
+      return;
     }
     const buffer = await response.arrayBuffer();
-    return this.importUploadedExcel(buffer, fileName);
+    const parsed = await parseSanctionsExcelWorkbook(buffer, 'built-in-default', BUILT_IN_DATASET_FILE);
+    this.defaultRecords.set(parsed);
   }
 
   toggleWatchlistSource(id: string): void {

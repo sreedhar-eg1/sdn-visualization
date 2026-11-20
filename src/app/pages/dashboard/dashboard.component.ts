@@ -25,7 +25,7 @@ import {
   SourceRedTrend,
   TrendsSummary,
 } from '../../models/sanctions.models';
-import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
+import { SanctionsDataService } from '../../services/sanctions-data.service';
 import { exportRecordsToCsv } from '../../utils/csv-export.util';
 import { exportRecordsToExcel } from '../../utils/excel-export.util';
 import { parseAffiliationOrganization } from '../../utils/sanctions-csv-parser.util';
@@ -71,7 +71,6 @@ export class DashboardComponent {
   protected readonly selectedReportCountry = signal<string>('ALL');
   protected readonly uploadStatusMessage = signal<string | null>(null);
   protected readonly isDraggingFiles = signal<boolean>(false);
-  protected readonly builtInExcelFiles = BUILT_IN_EXCEL_FILES;
 
   // Sheet 4 System Total Screened Counts (Baseline Ground Truth from Excel Sheet 4)
   protected readonly platformScreenedCounts = signal<Record<string, number>>({
@@ -1999,9 +1998,7 @@ export class DashboardComponent {
       return;
     }
 
-    if (this.dataService.datasetMode() === 'MOCK_ONLY') {
-      this.dataService.datasetMode.set('UPLOADED_ONLY');
-    }
+    this.dataService.datasetMode.set('UPLOADED_ONLY');
     this.onPresetChange('ALL_DATES');
 
     const totalRecords = this.dataService.uploadedExcelRecords().length;
@@ -2009,15 +2006,6 @@ export class DashboardComponent {
     const dupNote = totalSkipped > 0 ? ` (${totalSkipped} duplicate row(s) skipped)` : '';
     this.uploadStatusMessage.set(
       `Merged +${totalAdded} record(s) from ${processedCount} file(s)${dupNote}. Active total: ${totalRecords} records across ${totalFiles} file(s).`
-    );
-  }
-
-  protected loadSampleExcel(): void {
-    const result = this.dataService.loadBuiltInSampleCsv();
-    this.dataService.datasetMode.set('UPLOADED_ONLY');
-    this.onPresetChange('ALL_DATES');
-    this.uploadStatusMessage.set(
-      `Loaded ${result.added} sample records (idams-sample-23-rows.csv). Upload additional files anytime to merge.`
     );
   }
 
@@ -2101,29 +2089,6 @@ export class DashboardComponent {
 
   protected closeRedModal(): void {
     this.modalContext.set(null);
-  }
-
-  protected async loadDirectExcel(fileName: string): Promise<void> {
-    try {
-      const result = await this.dataService.loadBuiltInExcel(fileName);
-      this.dataService.datasetMode.set('UPLOADED_ONLY');
-      this.onPresetChange('ALL_DATES');
-      this.uploadStatusMessage.set(
-        `Loaded ${result.added} records directly from ${fileName}. Active total: ${this.dataService.uploadedExcelRecords().length} records across ${this.dataService.uploadedFiles().length} file(s).`
-      );
-    } catch (err) {
-      this.uploadStatusMessage.set(
-        `Could not load ${fileName}: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-  }
-
-  protected onDirectExcelSelect(event: Event): void {
-    const select = event.target as HTMLSelectElement | null;
-    if (!select || !select.value) return;
-    const fileName = select.value;
-    select.value = '';
-    void this.loadDirectExcel(fileName);
   }
 
   protected async exportReportBriefExcel(): Promise<void> {

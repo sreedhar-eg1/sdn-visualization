@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { SanctionsDataService, BUILT_IN_EXCEL_FILES, type AvailableExcelFile } from '../../services/sanctions-data.service';
+import { SanctionsDataService } from '../../services/sanctions-data.service';
 import { WatchlistSourceConfig } from '../../models/sanctions.models';
 
 @Component({
@@ -57,8 +57,6 @@ export class AdminConfigComponent {
   // Screening Export File Ingestion signals
   protected readonly uploadStatusMessage = signal<string | null>(null);
   protected readonly isDraggingFiles = signal<boolean>(false);
-  protected readonly builtInExcelFiles = BUILT_IN_EXCEL_FILES;
-
   protected readonly filteredPalEntries = computed(() => {
     const q = this.palSearch().trim().toLowerCase();
     const list = this.dataService.palEntries();
@@ -264,36 +262,6 @@ export class AdminConfigComponent {
     const message = `Data got ingested: Merged +${totalAdded} record(s) from ${processedCount} file(s)${dupNote}. Total: ${totalRecords} active screening records across ${totalFiles} file(s).`;
     this.uploadStatusMessage.set(message);
     this.showToast(message);
-  }
-
-  protected loadSampleExcel(): void {
-    const result = this.dataService.loadBuiltInSampleCsv();
-    this.dataService.datasetMode.set('UPLOADED_ONLY');
-    const message = `Data got ingested: Loaded ${result.added} sample records (idams-sample-23-rows.csv). Active total: ${this.dataService.uploadedExcelRecords().length} records.`;
-    this.uploadStatusMessage.set(message);
-    this.showToast(message);
-  }
-
-  protected async loadDirectExcel(fileName: string): Promise<void> {
-    try {
-      const result = await this.dataService.loadBuiltInExcel(fileName);
-      this.dataService.datasetMode.set('UPLOADED_ONLY');
-      const message = `Data got ingested: Loaded ${result.added} records directly from ${fileName}. Active total: ${this.dataService.uploadedExcelRecords().length} records.`;
-      this.uploadStatusMessage.set(message);
-      this.showToast(message);
-    } catch (err) {
-      this.uploadStatusMessage.set(
-        `Could not load ${fileName}: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-  }
-
-  protected onDirectExcelSelect(event: Event): void {
-    const select = event.target as HTMLSelectElement | null;
-    if (!select || !select.value) return;
-    const fileName = select.value;
-    select.value = '';
-    void this.loadDirectExcel(fileName);
   }
 
   protected removeUploadedFile(batchId: string): void {

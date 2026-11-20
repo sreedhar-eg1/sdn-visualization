@@ -149,27 +149,6 @@
             />
           </label>
 
-          <!-- Pre-loaded Sample Datasets Dropdown -->
-          <select
-            class="mc-select text-xs py-2 px-3"
-            (change)="onDirectExcelSelect($event)"
-            aria-label="Directly load built-in screening dataset"
-          >
-            <option value="" disabled selected>Load Built-in Sample Datasets &hellip;</option>
-            @for (file of builtInExcelFiles; track file.name) {
-              <option [value]="file.name">{{ file.label }} ({{ file.recordCount }} recs)</option>
-            }
-          </select>
-
-          <!-- Quick 23-Row Sample Button -->
-          <!-- <button
-            type="button"
-            (click)="loadSampleExcel()"
-            class="mc-btn mc-btn-ghost mc-btn-sm cursor-pointer"
-            title="Load built-in 23-row demo sample"
-          >
-            <span>Load 23-Row Demo Sample</span>
-          </button> -->
         </div>
       </div>
     </div>
